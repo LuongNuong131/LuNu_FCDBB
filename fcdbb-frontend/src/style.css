@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
+  color: white;
+  min-height: 100vh;
+}
+
+.glass-panel {
+  @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-2xl rounded-2xl p-6;
+}
+.glass-input {
+  @apply w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400;
+}
+.glass-input option {
+  @apply bg-gray-800 text-white;
+}
+.glass-btn {
+  @apply w-full bg-blue-600/80 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border border-blue-400/30;
+}
