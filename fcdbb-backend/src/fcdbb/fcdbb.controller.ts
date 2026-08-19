@@ -1,38 +1,36 @@
-import { Controller, Get, Post, Delete, Param, Body, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FcdbbService } from './fcdbb.service';
 
 @Controller('api')
+// API nhịp tim chống ngủ đông
+  @Get('ping')
+  ping() { return { status: 'awake', time: new Date() }; }
 export class FcdbbController {
-  constructor(private readonly fcdbbService: FcdbbService) {}
+  constructor(private readonly srv: FcdbbService) {}
 
-  @Get('players')
-  getPlayers() { return this.fcdbbService.getPlayers(); }
+  @Post('auth/login') login(@Body() body: any) { return this.srv.login(body.username, body.password); }
+  @Get('users') getProfiles() { return this.srv.getProfiles(); }
+  @Get('users/:id') getProfileById(@Param('id') id: number) { return this.srv.getProfileById(id); }
+  @Post('users') createUser(@Body() body: any) { return this.srv.createUser(body); }
+  @Put('users/:id') updateUser(@Param('id') id: number, @Body() body: any) { return this.srv.updateUser(id, body); }
+  @Delete('users/:id') deleteUser(@Param('id') id: number) { return this.srv.deleteUser(id); }
+  @Put('users/:id/reset-password') resetPassword(@Param('id') id: number, @Body() body: { password: string }) { return this.srv.resetPassword(id, body.password); }
+  @Post('users/:id/avatar') @UseInterceptors(FileInterceptor('file')) uploadAvatar(@Param('id') id: number, @UploadedFile() file: Express.Multer.File) { return this.srv.uploadAvatar(id, file); }
 
-  @Post('players/import')
-  @UseInterceptors(FileInterceptor('file'))
-  importPlayers(@UploadedFile() file: Express.Multer.File) {
-    return this.fcdbbService.importPlayers(file.buffer);
-  }
+  @Get('home') getHomeData() { return this.srv.getHomeData(); }
+  
+  // Dòng bị thiếu đã được thêm vào đây:
+  @Get('matches') getMatches() { return this.srv.getMatches(); } 
+  
+  @Post('matches') createMatch(@Body() body: any) { return this.srv.createMatch(body); }
+  @Put('matches/:id') updateMatch(@Param('id') id: number, @Body() body: any) { return this.srv.updateMatch(id, body); }
+  @Delete('matches/:id') deleteMatch(@Param('id') id: number) { return this.srv.deleteMatch(id); }
+  @Get('matches/:id/details') getMatchDetails(@Param('id') id: number) { return this.srv.getMatchDetails(id); }
+  @Post('attendance/checkin') checkin(@Body() body: any) { return this.srv.checkin(body.userId, body.matchId, body.lat, body.lng); }
 
-  @Get('locations')
-  getLocations() { return this.fcdbbService.getLocations(); }
-
-  @Post('locations')
-  addLocation(@Body() body: any) {
-    return this.fcdbbService.addLocation(body);
-  }
-
-  @Delete('locations/:id')
-  deleteLocation(@Param('id') id: number) {
-    return this.fcdbbService.deleteLocation(id);
-  }
-
-  @Get('attendance')
-  getHistory() { return this.fcdbbService.getHistory(); }
-
-  @Post('attendance/checkin')
-  checkin(@Body() body: { playerId: number; locationId: number; distance: number }) {
-    return this.fcdbbService.checkin(body.playerId, body.locationId, body.distance);
-  }
+  @Get('funds') getFunds() { return this.srv.getFunds(); }
+  @Put('funds/:id') updateFund(@Param('id') id: number, @Body() body: any) { return this.srv.updateFund(id, body); }
+  @Delete('funds/:id') deleteFund(@Param('id') id: number) { return this.srv.deleteFund(id); }
+  @Post('funds') @UseInterceptors(FileInterceptor('file')) createFund(@Body() body: any, @UploadedFile() file: Express.Multer.File) { return this.srv.createFund(body, file); }
 }
