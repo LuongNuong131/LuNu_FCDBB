@@ -1,37 +1,55 @@
 # =========================
-# Node.js / Frontend
+# Node.js & Dependencies
 # =========================
 node_modules/
-dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# =========================
-# Java / Spring Boot / Backend
-# =========================
-target/
-!.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
-*.class
-*.jar
-*.war
-*.ear
 *.log
 
 # =========================
-# IDEs & OS (Tránh rác từ hệ điều hành và Editor)
+# TypeScript & NestJS Build
 # =========================
-.idea/
+dist/
+out/
+build/
+*.tsbuildinfo
+
+# =========================
+# Testing & Coverage
+# =========================
+coverage/
+.nyc_output/
+*.lcov
+
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.env
+
+# =========================
+# Caching & Temp Files
+# =========================
+.npm/
+.yarn/cache
+.eslintcache
+.stylelintcache
+.cache/
+.parcel-cache/
+.temp/
+
+# =========================
+# OS & Editor/IDE
+# =========================
 .vscode/
-*.swp
-*.swo
+.idea/
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
