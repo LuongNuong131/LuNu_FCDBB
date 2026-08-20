@@ -142,8 +142,11 @@ export class FcdbbService implements OnModuleInit {
   async createMatch(data: Partial<Match>) {
     const normalized = this.normalizeMatchTimes(data);
     this.validateMatchTimes(normalized);
-    if (new Date(normalized.end_time as Date).getTime() <= Date.now()) {
-      throw new BadRequestException('Chốt sổ phải là một thời điểm trong tương lai.');
+    const endTimestamp = new Date(normalized.end_time as Date).getTime();
+    if (endTimestamp <= Date.now()) {
+      const received = this.formatVietnamDateTime(new Date(endTimestamp));
+      const serverNow = this.formatVietnamDateTime(new Date());
+      throw new BadRequestException(`Chốt sổ đang được nhận là ${received}, trong khi giờ hệ thống là ${serverNow}. Hãy chọn lại ngày/giờ chốt sổ sau hiện tại.`);
     }
     return this.matchRepo.save(this.matchRepo.create(normalized));
   }
