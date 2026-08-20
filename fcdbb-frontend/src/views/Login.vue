@@ -1,10 +1,10 @@
 <template>
   <div class="grid min-h-[calc(100vh-8rem)] items-center gap-8 py-4 lg:grid-cols-[1.05fr_.95fr] lg:gap-16 lg:py-10">
-    <section class="hidden lg:block">
-      <p class="eyebrow mb-5">FC ĐÁ BAY BÓNG · SEASON 2026</p>
-      <h1 class="max-w-xl font-display text-6xl font-extrabold leading-[1.04] tracking-[-.065em] text-white xl:text-7xl">Bản lĩnh trên sân.<br><span class="text-amber-300">Kỷ luật ngoài sân.</span></h1>
-      <p class="mt-7 max-w-lg text-base leading-7 text-slate-400">Nơi mọi trận đấu, mọi thành viên và mọi khoảnh khắc của đội bóng được kết nối trong một không gian vận hành rõ ràng.</p>
-      <div class="mt-10 flex gap-3">
+    <section class="block text-center lg:text-left">
+      <p class="eyebrow mb-3 lg:mb-5">FC ĐÁ BAY BÓNG · SEASON 2026</p>
+      <h1 class="mx-auto max-w-xl font-display text-4xl font-extrabold leading-[1.04] tracking-[-.065em] text-white sm:text-5xl lg:mx-0 lg:text-6xl xl:text-7xl">Bản lĩnh trên sân.<br><span class="text-amber-300">Kỷ luật ngoài sân.</span></h1>
+      <p class="mx-auto mt-4 max-w-lg text-sm leading-6 text-slate-400 sm:text-base lg:mx-0 lg:mt-7 lg:leading-7">Nơi mọi trận đấu, mọi thành viên và mọi khoảnh khắc của đội bóng được kết nối trong một không gian vận hành rõ ràng.</p>
+      <div class="mt-10 hidden gap-3 lg:flex">
         <div class="stat-card min-w-32"><p class="stat-label">Mục tiêu</p><p class="stat-value">01</p><p class="mt-1 text-xs text-slate-400">Một tập thể</p></div>
         <div class="stat-card min-w-32"><p class="stat-label">Tinh thần</p><p class="stat-value">100%</p><p class="mt-1 text-xs text-slate-400">Không bỏ cuộc</p></div>
       </div>
@@ -39,8 +39,10 @@
 import { ref } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import { useToast } from '../composables/useToast';
 
 const router = useRouter();
+const { addToast } = useToast();
 const username = ref('');
 const password = ref('');
 // Lấy biến môi trường Vercel (Nếu rỗng nó sẽ tự fallback về localhost để tránh lỗi)
@@ -48,7 +50,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const login = async () => {
   if (!username.value || !password.value) {
-    return alert('Vui lòng nhập đủ tài khoản và mật khẩu!');
+    return addToast('Vui lòng nhập đủ tài khoản và mật khẩu!', 'warning');
   }
   
   console.log("🔗 Đang kết nối tới Backend tại:", API); // Dòng này để bạn check F12 xem link đúng chưa
@@ -67,7 +69,7 @@ const login = async () => {
     
   } catch (err) {
     console.error("🚨 Lỗi đăng nhập toàn tập:", err);
-    alert(err.response?.data?.message || 'Không thể kết nối tới Server. Hãy kiểm tra F12 (Console)!');
+    addToast(err.response?.data?.message || 'Không thể kết nối tới Server. Hãy kiểm tra F12 (Console)!', 'error');
   }
 };
 </script>

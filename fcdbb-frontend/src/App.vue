@@ -50,6 +50,7 @@
     </main>
 
     <ToastPopup />
+    <DialogPopup />
   </div>
 </template>
 
@@ -57,6 +58,7 @@
 import { ref, watchEffect } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ToastPopup from './components/ToastPopup.vue';
+import DialogPopup from './components/DialogPopup.vue';
 
 const router = useRouter();
 const route = useRoute();

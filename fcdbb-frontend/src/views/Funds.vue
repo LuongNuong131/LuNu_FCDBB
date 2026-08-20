@@ -10,10 +10,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
+import { useToast } from '../composables/useToast';
+import { useDialog } from '../composables/useDialog';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const funds = ref([]);
 const isAdmin = JSON.parse(localStorage.getItem('fcdbb_user') || '{}')?.role === 'admin';
+const { addToast } = useToast();
+const { openConfirm } = useDialog();
 const form = ref({ type: 'THU', amount: '', reason: '', file: null });
 const modalImg = ref(null);
 
@@ -33,23 +37,24 @@ onMounted(load);
 const viewImage = (url) => { modalImg.value = url; };
 
 const addFund = async () => {
-  if (!form.value.amount || !form.value.reason) return alert('Vui lòng nhập đủ số tiền và lý do!');
+  if (!form.value.amount || !form.value.reason) return addToast('Vui lòng nhập đủ số tiền và lý do!', 'warning');
   const fd = new FormData();
   fd.append('type', form.value.type); fd.append('amount', form.value.amount); fd.append('reason', form.value.reason);
   if(form.value.file) fd.append('file', form.value.file);
   try {
     await axios.post(`${API}/funds`, fd);
     form.value = { type: 'THU', amount: '', reason: '', file: null };
-    load(); alert('Đã lưu giao dịch!');
-  } catch (e) { alert("Lỗi lưu quỹ!"); }
+    load(); addToast('Đã lưu giao dịch!', 'success');
+  } catch (e) { addToast('Lỗi lưu quỹ!', 'error'); }
 };
 
 const deleteFund = async (id) => {
-  if(confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) { 
+  if (await openConfirm('Bạn có chắc chắn muốn xóa giao dịch này?', { title: 'Xóa giao dịch?', tone: 'danger', confirmText: 'Xóa giao dịch' })) { 
     try {
       await axios.delete(`${API}/funds/${id}`); 
-      load(); 
-    } catch (e) { alert("Lỗi xóa!"); }
+      load();
+      addToast('Đã xóa giao dịch.', 'success');
+    } catch (e) { addToast('Lỗi xóa!', 'error'); }
   }
 };
 </script>

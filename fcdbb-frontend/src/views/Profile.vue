@@ -10,11 +10,13 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import { useToast } from '../composables/useToast';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const route = useRoute();
 const profile = ref(null);
 const currentUser = JSON.parse(localStorage.getItem('fcdbb_user') || '{}');
+const { addToast } = useToast();
 const isOwner = computed(() => currentUser.id == route.params.id);
 const isAdmin = computed(() => currentUser.role === 'admin');
 
@@ -33,15 +35,15 @@ const uploadAvatar = async (event) => {
     const res = await axios.post(`${API}/users/${route.params.id}/avatar`, formData);
     profile.value.avatar = res.data.avatar;
     if (isOwner.value) { currentUser.avatar = res.data.avatar; localStorage.setItem('fcdbb_user', JSON.stringify(currentUser)); }
-    alert('Đổi Avatar thành công!');
-  } catch (e) { alert('Lỗi tải ảnh!'); }
+    addToast('Đổi ảnh đại diện thành công!', 'success');
+  } catch (e) { addToast('Lỗi tải ảnh đại diện!', 'error'); }
 };
 
 const save = async () => {
   try {
     const res = await axios.put(`${API}/users/${route.params.id}`, profile.value);
     profile.value = res.data;
-    alert('Lưu hồ sơ thành công!');
-  } catch (e) { alert('Lỗi lưu hồ sơ!'); }
+    addToast('Lưu hồ sơ thành công!', 'success');
+  } catch (e) { addToast('Lỗi lưu hồ sơ!', 'error'); }
 };
 </script>

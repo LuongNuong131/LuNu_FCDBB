@@ -30,8 +30,10 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
+import { useToast } from '../composables/useToast';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const { addToast } = useToast();
 const user = JSON.parse(localStorage.getItem('fcdbb_user') || '{}');
 const activeMatch = ref(null);
 const historyMatches = ref([]);
@@ -70,7 +72,7 @@ const loadData = async () => {
 onMounted(loadData);
 
 const checkin = () => {
-  if (!navigator.geolocation) return alert('Trình duyệt không hỗ trợ GPS');
+  if (!navigator.geolocation) return addToast('Trình duyệt không hỗ trợ GPS.', 'warning');
   loading.value = true;
   navigator.geolocation.getCurrentPosition(
     async pos => {
@@ -78,9 +80,9 @@ const checkin = () => {
         await axios.post(`${API}/attendance/checkin`, {
           userId: user.id, matchId: activeMatch.value.id, lat: pos.coords.latitude, lng: pos.coords.longitude
         });
-        alert('Điểm danh thành công!');
+        addToast('Điểm danh thành công!', 'success');
         loadData();
-      } catch (err) { alert(err.response?.data?.message || 'Lỗi kết nối!'); } 
+      } catch (err) { addToast(err.response?.data?.message || 'Lỗi kết nối!', 'error'); } 
       finally { loading.value = false; }
     }, 
     (err) => { 
@@ -88,7 +90,7 @@ const checkin = () => {
       if(err.code === 1) msg = "Bạn đã từ chối quyền truy cập vị trí!";
       if(err.code === 2) msg = "Không có tín hiệu GPS/Mạng!";
       if(err.code === 3) msg = "Quá thời gian chờ lấy GPS!";
-      alert(msg); loading.value = false; 
+      addToast(msg, 'error'); loading.value = false; 
     }, 
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
   );

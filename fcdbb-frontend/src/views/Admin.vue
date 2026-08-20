@@ -128,8 +128,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
+import { useToast } from '../composables/useToast';
+import { useDialog } from '../composables/useDialog';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const { addToast } = useToast();
+const { openConfirm, openPrompt } = useDialog();
 const tab = ref('matches');
 const allMatches = ref([]);
 const users = ref([]);
@@ -161,27 +165,27 @@ const applyFamiliarLocation = (e) => {
   match.value.location_name = l.name; match.value.lat = l.lat; match.value.lng = l.lng; match.value.map_link = l.map_link;
 };
 
-const getGPS = () => navigator.geolocation.getCurrentPosition(pos => { match.value.lat = pos.coords.latitude; match.value.lng = pos.coords.longitude; }, () => alert('Lỗi lấy GPS! Hãy kiểm tra cài đặt vị trí.'));
+const getGPS = () => navigator.geolocation.getCurrentPosition(pos => { match.value.lat = pos.coords.latitude; match.value.lng = pos.coords.longitude; }, () => addToast('Lỗi lấy GPS! Hãy kiểm tra cài đặt vị trí.', 'error'));
 const isMatchActive = (endTime) => new Date(endTime) > new Date();
 
 const saveMatch = async () => {
   try {
     if (isEditing.value) await axios.put(`${API}/matches/${match.value.id}`, match.value);
     else await axios.post(`${API}/matches`, match.value);
-    alert('Lưu trận thành công!'); resetMatchForm(); loadAdminData();
-  } catch(e) { alert("Lỗi lưu trận!"); }
+    addToast('Lưu trận thành công!', 'success'); resetMatchForm(); loadAdminData();
+  } catch(e) { addToast('Lỗi lưu trận!', 'error'); }
 };
 const editMatch = (m) => { match.value = { ...m, start_time: m.start_time.slice(0,16), lock_time: m.lock_time.slice(0,16), end_time: m.end_time.slice(0,16) }; isEditing.value = true; };
 const stopMatch = async (id) => {
-  if (confirm('Đóng sổ điểm danh trận này ngay lập tức?')) {
+  if (await openConfirm('Đóng sổ điểm danh trận này ngay lập tức?', { title: 'Đóng sổ điểm danh?', tone: 'warning', confirmText: 'Đóng sổ' })) {
     const now = new Date(); now.setHours(now.getHours() + 7); await axios.put(`${API}/matches/${id}`, { end_time: now.toISOString() }); loadAdminData();
   }
 };
-const deleteMatch = async (id) => { if(confirm('Xóa VĨNH VIỄN trận này và mọi dữ liệu điểm danh?')) { await axios.delete(`${API}/matches/${id}`); loadAdminData(); }};
+const deleteMatch = async (id) => { if (await openConfirm('Xóa vĩnh viễn trận này và mọi dữ liệu điểm danh?', { title: 'Xóa trận đấu?', tone: 'danger', confirmText: 'Xóa vĩnh viễn' })) { await axios.delete(`${API}/matches/${id}`); loadAdminData(); addToast('Đã xóa trận đấu.', 'success'); } };
 const resetMatchForm = () => { match.value = { id: null, title: '', location_name: '', lat: '', lng: '', map_link: '', start_time: '', lock_time: '', end_time: '' }; isEditing.value = false; };
 
-const createUser = async () => { await axios.post(`${API}/users`, newUser.value); newUser.value = { username: '', password: '', name: '' }; loadAdminData(); alert('Tạo thành công!'); };
-const saveUserRole = async (u) => { await axios.put(`${API}/users/${u.id}`, { role: u.role }); alert('Cập nhật quyền thành công!'); };
-const resetPass = async (id) => { const np = prompt('Nhập mật khẩu mới:'); if(np) { await axios.put(`${API}/users/${id}/reset-password`, { password: np }); alert('Đã reset MK!'); } };
-const deleteUser = async (id) => { if(confirm('Xóa VĨNH VIỄN cầu thủ này?')) { await axios.delete(`${API}/users/${id}`); loadAdminData(); }};
+const createUser = async () => { await axios.post(`${API}/users`, newUser.value); newUser.value = { username: '', password: '', name: '' }; loadAdminData(); addToast('Tạo tài khoản thành công!', 'success'); };
+const saveUserRole = async (u) => { await axios.put(`${API}/users/${u.id}`, { role: u.role }); addToast('Cập nhật quyền thành công!', 'success'); };
+const resetPass = async (id) => { const np = await openPrompt('Nhập mật khẩu mới cho tài khoản này.', { title: 'Reset mật khẩu', placeholder: 'Mật khẩu mới', inputType: 'password', confirmText: 'Cập nhật', tone: 'info' }); if (np) { await axios.put(`${API}/users/${id}/reset-password`, { password: np }); addToast('Đã reset mật khẩu!', 'success'); } };
+const deleteUser = async (id) => { if (await openConfirm('Xóa vĩnh viễn cầu thủ này?', { title: 'Xóa cầu thủ?', tone: 'danger', confirmText: 'Xóa cầu thủ' })) { await axios.delete(`${API}/users/${id}`); loadAdminData(); addToast('Đã xóa cầu thủ.', 'success'); } };
 </script>

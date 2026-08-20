@@ -99,8 +99,12 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { useToast } from '../composables/useToast';
+import { useDialog } from '../composables/useDialog';
 
 const API_URL = 'http://localhost:3000/api';
+const { addToast } = useToast();
+const { openConfirm } = useDialog();
 const isAuthenticated = ref(false);
 const passcode = ref('');
 
@@ -114,7 +118,7 @@ const login = () => {
     isAuthenticated.value = true;
     fetchAdminData();
   } else {
-    alert('Sai mật khẩu!');
+    addToast('Sai mật khẩu!', 'error');
   }
 };
 
@@ -136,18 +140,18 @@ const handleFileUpload = (event) => {
 };
 
 const uploadExcel = async () => {
-  if (!selectedFile.value) return alert('Vui lòng chọn file Excel!');
+  if (!selectedFile.value) return addToast('Vui lòng chọn file Excel!', 'warning');
   const formData = new FormData();
   formData.append('file', selectedFile.value);
   try {
     await axios.post(`${API_URL}/players/import`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
-    alert('Import thành công!');
+    addToast('Import thành công!', 'success');
     selectedFile.value = null;
     fetchAdminData();
   } catch (err) {
-    alert('Lỗi import!');
+    addToast('Lỗi import!', 'error');
   }
 };
 
@@ -155,7 +159,7 @@ const getAdminGPS = () => {
   navigator.geolocation.getCurrentPosition(pos => {
     newLoc.value.lat = pos.coords.latitude;
     newLoc.value.lng = pos.coords.longitude;
-  }, () => alert('Không lấy được GPS'));
+  }, () => addToast('Không lấy được GPS.', 'error'));
 };
 
 const addLocation = async () => {
@@ -164,12 +168,12 @@ const addLocation = async () => {
     newLoc.value = { name: '', lat: '', lng: '', radius: 100 };
     fetchAdminData();
   } catch (err) {
-    alert('Lỗi thêm địa điểm');
+    addToast('Lỗi thêm địa điểm', 'error');
   }
 };
 
 const deleteLocation = async (id) => {
-  if (confirm('Xóa sân bóng này?')) {
+  if (await openConfirm('Xóa sân bóng này?', { title: 'Xóa địa điểm?', tone: 'danger', confirmText: 'Xóa địa điểm' })) {
     await axios.delete(`${API_URL}/locations/${id}`);
     fetchAdminData();
   }

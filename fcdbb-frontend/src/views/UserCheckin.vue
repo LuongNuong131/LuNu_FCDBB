@@ -54,8 +54,10 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { useToast } from '../composables/useToast';
 
 const API_URL = 'http://localhost:3000/api';
+const { addToast } = useToast();
 const players = ref([]);
 const locations = ref([]);
 const selectedPlayer = ref('');
@@ -89,12 +91,12 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 const handleCheckin = () => {
   if (!selectedPlayer.value || !selectedLocation.value) {
-    alert('Vui lòng chọn cầu thủ và sân bóng!');
+    addToast('Vui lòng chọn cầu thủ và sân bóng!', 'warning');
     return;
   }
 
   if (!navigator.geolocation) {
-    alert('Trình duyệt không hỗ trợ GPS.');
+    addToast('Trình duyệt không hỗ trợ GPS.', 'warning');
     return;
   }
 
