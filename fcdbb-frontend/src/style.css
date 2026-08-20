@@ -2,121 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-floodlight text-chalk-100 font-sans min-h-screen;
-    background-attachment: fixed;
-  }
-  ::selection {
-    @apply bg-fc-accent/30 text-white;
-  }
-  :focus-visible {
-    outline: 2px solid theme('colors.fc.accent');
-    outline-offset: 2px;
-    border-radius: 6px;
-  }
-  h1, h2, h3 {
-    @apply font-display;
-  }
+body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #312e81 100%);
+  background-attachment: fixed;
+  color: white;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
 }
 
-@layer components {
-  /* ---------- Panels ---------- */
-  .glass-panel {
-    @apply relative bg-white/[0.04] backdrop-blur-xl border border-white/10 shadow-glow-blue rounded-2xl p-6;
-    background-image: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 40%);
-  }
-  .glass-panel::before {
-    content: '';
-    @apply absolute inset-0 rounded-2xl pointer-events-none;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
-  }
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
+::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.5); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.8); }
 
-  /* ---------- Inputs ---------- */
-  .glass-input {
-    @apply w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-chalk-muted/70 transition-all duration-200;
-  }
-  .glass-input:focus {
-    @apply outline-none border-fc-accent/60 bg-white/[0.06];
-    box-shadow: 0 0 0 3px rgba(56,189,248,0.15);
-  }
-  .glass-input option {
-    @apply bg-fc-900 text-white;
-  }
-
-  /* ---------- Buttons ---------- */
-  .glass-btn {
-    @apply relative w-full overflow-hidden bg-gradient-to-r from-fc-500 to-fc-accent text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 border border-white/10 shadow-glow-blue;
-  }
-  .glass-btn:hover {
-    @apply -translate-y-0.5 shadow-glow-blue-lg;
-  }
-  .glass-btn:active {
-    @apply translate-y-0;
-  }
-  .glass-btn::after {
-    content: '';
-    @apply absolute inset-0 bg-shine bg-no-repeat opacity-0 transition-opacity duration-300;
-    background-size: 200% 100%;
-  }
-  .glass-btn:hover::after {
-    @apply opacity-100 animate-shine-sweep;
-  }
-  .btn-gold {
-    @apply !bg-gradient-to-r !from-gold !to-amber-400 !text-fc-950 !shadow-glow-gold;
-  }
-  .btn-gold:disabled {
-    @apply !bg-white/10 !text-chalk-muted !shadow-none cursor-not-allowed opacity-70;
-  }
-
-  /* ---------- Typography accents ---------- */
-  .text-gold {
-    @apply text-gold;
-  }
-  .section-eyebrow {
-    @apply text-xs font-bold tracking-[0.25em] uppercase text-fc-accent/80;
-  }
-
-  /* ---------- Live scoreboard ---------- */
-  .scoreboard-tag {
-    @apply text-xs font-bold tracking-widest uppercase text-red-300 bg-red-500/10 border border-red-400/30 px-2.5 py-1 rounded-full;
-  }
-  .live-dot {
-    @apply inline-block w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse-live;
-  }
-
-  /* ---------- Badge crest ---------- */
-  .badge-crest {
-    @apply relative w-16 h-16 flex items-center justify-center rounded-full text-3xl bg-gradient-to-br from-fc-500 to-fc-900 border-2 border-gold/40 shadow-glow-gold;
-  }
-  .badge-crest::before {
-    content: '';
-    @apply absolute -inset-1 rounded-full;
-    background: conic-gradient(from 0deg, transparent, rgba(245,196,81,0.5), transparent 30%);
-    animation: crestShine 3s linear infinite;
-    z-index: -1;
-  }
-
-  /* ---------- Ticket stub (lịch sử trận) ---------- */
-  .ticket-stub {
-    @apply relative glass-panel !p-5 overflow-hidden;
-  }
-  .ticket-stub::before,
-  .ticket-stub::after {
-    content: '';
-    @apply absolute w-4 h-4 rounded-full bg-fc-900;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-  .ticket-stub::before { left: -8px; }
-  .ticket-stub::after { right: -8px; }
-
-  /* ---------- Fade-up entrance, staggered ---------- */
-  .fade-up {
-    @apply opacity-0 animate-fade-up;
-  }
-  .fade-up-1 { animation-delay: 0.05s; }
-  .fade-up-2 { animation-delay: 0.1s; }
-  .fade-up-3 { animation-delay: 0.15s; }
-  .fade-up-4 { animation-delay: 0.2s; }
+/* UI Components */
+.glass-panel {
+  @apply bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] rounded-2xl p-6 transition-all duration-300;
 }
+.glass-panel:hover {
+  @apply shadow-[0_8px_32px_0_rgba(59,130,246,0.2)] border-white/30;
+}
+
+.glass-input {
+  @apply w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-300;
+}
+.glass-input option {
+  @apply bg-gray-900 text-white;
+}
+.glass-input:disabled {
+  @apply bg-white/5 opacity-50 cursor-not-allowed border-white/5;
+}
+
+.glass-btn {
+  @apply w-full flex justify-center items-center bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 backdrop-blur-sm border border-blue-400/30 shadow-[0_4px_15px_rgba(37,99,235,0.3)] hover:shadow-[0_6px_20px_rgba(59,130,246,0.5)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-gold {
+  @apply from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-gray-900 border-yellow-300/50 shadow-[0_4px_15px_rgba(234,179,8,0.3)] hover:shadow-[0_6px_20px_rgba(250,204,21,0.5)];
+}
+
+.badge-crest {
+  @apply w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-4xl shadow-[0_0_20px_rgba(234,179,8,0.5)] border-4 border-white/20;
+}
+
+.section-eyebrow {
+  @apply text-xs font-black tracking-[0.2em] text-blue-300;
+}
+
+.live-dot {
+  @apply inline-block w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)];
+}
+
+.scoreboard-tag {
+  @apply inline-block text-xs font-bold uppercase tracking-wider text-red-400 bg-red-500/10 px-2 py-1 rounded border border-red-500/20;
+}
+
+.ticket-stub {
+  @apply bg-gradient-to-br from-white/10 to-white/5 border border-white/10 p-5 rounded-xl shadow-lg relative overflow-hidden transition-all duration-300 transform hover:-translate-y-1 hover:border-blue-400/50;
+}
+.ticket-stub::before, .ticket-stub::after {
+  content: '';
+  @apply absolute top-1/2 w-6 h-6 bg-[#0f172a] rounded-full transform -translate-y-1/2 border border-white/10 shadow-inner;
+}
+.ticket-stub::before { @apply -left-3 border-l-0; }
+.ticket-stub::after { @apply -right-3 border-r-0; }
