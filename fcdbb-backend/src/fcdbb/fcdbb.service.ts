@@ -61,6 +61,27 @@ export class FcdbbService implements OnModuleInit {
     return { message: 'Đổi mật khẩu thành công' };
   }
 
+  async changePassword(id: number, currentPassword: string, newPassword: string) {
+    if (!currentPassword || !newPassword) {
+      throw new BadRequestException('Vui lòng nhập đủ mật khẩu.');
+    }
+    if (newPassword.length < 6) {
+      throw new BadRequestException('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    }
+    if (currentPassword === newPassword) {
+      throw new BadRequestException('Mật khẩu mới phải khác mật khẩu hiện tại.');
+    }
+
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user?.password || !(await bcrypt.compare(currentPassword, user.password))) {
+      throw new UnauthorizedException('Mật khẩu hiện tại không đúng.');
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.userRepo.update(id, { password: hashed });
+    return { message: 'Đổi mật khẩu thành công' };
+  }
+
   async uploadAvatar(id: number, file: Express.Multer.File) {
     const user = await this.getProfileById(id);
     if (!user) throw new BadRequestException('User not found');

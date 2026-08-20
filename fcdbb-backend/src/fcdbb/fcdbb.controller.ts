@@ -17,6 +17,7 @@ export class FcdbbController {
   @Put('users/:id') updateUser(@Param('id') id: number, @Body() body: any) { return this.srv.updateUser(id, body); }
   @Delete('users/:id') deleteUser(@Param('id') id: number) { return this.srv.deleteUser(id); }
   @Put('users/:id/reset-password') resetPassword(@Param('id') id: number, @Body() body: { password: string }) { return this.srv.resetPassword(id, body.password); }
+  @Put('users/:id/change-password') changePassword(@Param('id') id: number, @Body() body: { currentPassword: string; newPassword: string }) { return this.srv.changePassword(id, body.currentPassword, body.newPassword); }
   @Post('users/:id/avatar') @UseInterceptors(FileInterceptor('file')) uploadAvatar(@Param('id') id: number, @UploadedFile() file: Express.Multer.File) { return this.srv.uploadAvatar(id, file); }
 
   @Get('home') getHomeData() { return this.srv.getHomeData(); }
