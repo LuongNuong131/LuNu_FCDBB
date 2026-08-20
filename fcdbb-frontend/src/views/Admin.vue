@@ -41,9 +41,9 @@
               </div>
             </div>
             
-            <div><label class="text-xs font-bold uppercase tracking-wide text-green-400 mb-1 block">Bắt đầu</label><input v-model="match.start_time" type="datetime-local" class="glass-input font-mono text-sm"></div>
-            <div><label class="text-xs font-bold uppercase tracking-wide text-yellow-400 mb-1 block">Khóa điểm danh (Đúng giờ)</label><input v-model="match.lock_time" type="datetime-local" class="glass-input font-mono text-sm"></div>
-            <div><label class="text-xs font-bold uppercase tracking-wide text-red-400 mb-1 block">Chốt sổ (Kết thúc)</label><input v-model="match.end_time" type="datetime-local" class="glass-input font-mono text-sm"></div>
+            <DateTimeField v-model="match.start_time" id="match-start" label="Bắt đầu trận" tone="green" />
+            <DateTimeField v-model="match.lock_time" id="match-lock" label="Khóa điểm danh · Mốc tính đi muộn" tone="amber" />
+            <DateTimeField v-model="match.end_time" id="match-end" label="Chốt sổ · Kết thúc trận" tone="rose" />
             <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Bản đồ</label><input v-model="match.map_link" placeholder="Link Google Map" class="glass-input text-sm text-blue-300"></div>
           </div>
           
@@ -63,8 +63,8 @@
             <div v-for="m in allMatches" :key="m.id" class="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col sm:flex-row justify-between sm:items-center gap-4 hover:bg-white/10 transition-colors">
               <div>
                 <p class="font-black text-lg text-white mb-1">{{ m.title }}</p>
-                <p class="text-sm font-mono text-blue-300 mb-1">{{ new Date(m.start_time).toLocaleString('vi-VN') }}</p>
-                <p class="text-xs text-gray-400 flex items-center gap-1">📍 {{ m.location_name }}</p>
+                <p class="text-sm font-mono text-blue-300 mb-1">{{ formatVietnamDateTime(m.start_time) }}</p>
+                <div class="mt-2 space-y-1 text-[11px] text-slate-400"><p>📍 {{ m.location_name }}</p><p class="text-amber-300/80">Khóa điểm danh: {{ formatVietnamDateTime(m.lock_time) }}</p><p class="text-rose-300/80">Chốt sổ: {{ formatVietnamDateTime(m.end_time) }}</p></div>
               </div>
               <div class="flex flex-wrap gap-2">
                 <button v-if="isMatchActive(m.end_time)" @click="editMatch(m)" class="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-4 py-2 rounded-lg text-xs font-bold hover:bg-yellow-500/30 transition">Sửa</button>
@@ -130,6 +130,8 @@ import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from '../composables/useToast';
 import { useDialog } from '../composables/useDialog';
+import DateTimeField from '../components/DateTimeField.vue';
+import { formatVietnamDateTime, toVietnamInput } from '../utils/datetime';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const { addToast } = useToast();
@@ -175,10 +177,10 @@ const saveMatch = async () => {
     addToast('Lưu trận thành công!', 'success'); resetMatchForm(); loadAdminData();
   } catch(e) { addToast('Lỗi lưu trận!', 'error'); }
 };
-const editMatch = (m) => { match.value = { ...m, start_time: m.start_time.slice(0,16), lock_time: m.lock_time.slice(0,16), end_time: m.end_time.slice(0,16) }; isEditing.value = true; };
+const editMatch = (m) => { match.value = { ...m, start_time: toVietnamInput(m.start_time), lock_time: toVietnamInput(m.lock_time), end_time: toVietnamInput(m.end_time) }; isEditing.value = true; };
 const stopMatch = async (id) => {
   if (await openConfirm('Đóng sổ điểm danh trận này ngay lập tức?', { title: 'Đóng sổ điểm danh?', tone: 'warning', confirmText: 'Đóng sổ' })) {
-    const now = new Date(); now.setHours(now.getHours() + 7); await axios.put(`${API}/matches/${id}`, { end_time: now.toISOString() }); loadAdminData();
+    const now = new Date(); await axios.put(`${API}/matches/${id}`, { end_time: now.toISOString() }); loadAdminData(); addToast('Đã đóng sổ điểm danh.', 'success');
   }
 };
 const deleteMatch = async (id) => { if (await openConfirm('Xóa vĩnh viễn trận này và mọi dữ liệu điểm danh?', { title: 'Xóa trận đấu?', tone: 'danger', confirmText: 'Xóa vĩnh viễn' })) { await axios.delete(`${API}/matches/${id}`); loadAdminData(); addToast('Đã xóa trận đấu.', 'success'); } };

@@ -69,7 +69,7 @@
           </thead>
           <tbody>
             <tr v-for="h in history" :key="h.id" class="border-b border-white/5 hover:bg-white/5 transition">
-              <td class="p-4 font-mono text-gray-300">{{ new Date(h.created_at).toLocaleString('vi-VN') }}</td>
+              <td class="p-4 font-mono text-gray-300">{{ formatVietnamDateTime(h.created_at) }}</td>
               <td class="p-4 font-bold text-white">{{ h.player?.name }}</td>
               <td class="p-4 text-blue-200">{{ h.location?.name }}</td>
               <td class="p-4 font-mono">{{ h.distance }}m</td>
@@ -99,6 +99,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { formatVietnamDateTime } from '../utils/datetime';
 import { useToast } from '../composables/useToast';
 import { useDialog } from '../composables/useDialog';
 

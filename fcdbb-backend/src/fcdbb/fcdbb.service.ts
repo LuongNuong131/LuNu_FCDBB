@@ -110,8 +110,51 @@ export class FcdbbService implements OnModuleInit {
   }
 
   async getMatches() { return this.matchRepo.find({ order: { start_time: 'DESC' } }); }
-  async createMatch(data: Partial<Match>) { return this.matchRepo.save(this.matchRepo.create(data)); }
-  async updateMatch(id: number, data: Partial<Match>) { await this.matchRepo.update(id, data); return this.matchRepo.findOne({where: {id}}); }
+
+  private parseVietnamDate(value: unknown) {
+    if (!value) return undefined;
+    if (value instanceof Date) return value;
+    const raw = String(value);
+    const normalized = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(raw)
+      ? `${raw.length === 16 ? `${raw}:00` : raw}+07:00`
+      : raw;
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) throw new BadRequestException('Thời gian trận đấu không hợp lệ.');
+    return date;
+  }
+
+  private normalizeMatchTimes(data: Partial<Match>) {
+    const normalized = { ...data };
+    for (const key of ['start_time', 'lock_time', 'end_time'] as const) {
+      if (data[key]) normalized[key] = this.parseVietnamDate(data[key]) as never;
+    }
+    return normalized;
+  }
+
+  private validateMatchTimes(data: Partial<Match>) {
+    const start = data.start_time ? new Date(data.start_time).getTime() : NaN;
+    const lock = data.lock_time ? new Date(data.lock_time).getTime() : NaN;
+    const end = data.end_time ? new Date(data.end_time).getTime() : NaN;
+    if ([start, lock, end].some(Number.isNaN)) throw new BadRequestException('Vui lòng nhập đủ và đúng ba mốc thời gian.');
+    if (!(start < lock && lock < end)) throw new BadRequestException('Thời gian phải theo thứ tự: Bắt đầu < Khóa điểm danh < Chốt sổ.');
+  }
+
+  async createMatch(data: Partial<Match>) {
+    const normalized = this.normalizeMatchTimes(data);
+    this.validateMatchTimes(normalized);
+    return this.matchRepo.save(this.matchRepo.create(normalized));
+  }
+
+  async updateMatch(id: number, data: Partial<Match>) {
+    const current = await this.matchRepo.findOne({ where: { id } });
+    if (!current) throw new BadRequestException('Trận đấu không tồn tại.');
+    const normalized = this.normalizeMatchTimes(data);
+    const merged = { ...current, ...normalized };
+    this.validateMatchTimes(merged);
+    await this.matchRepo.update(id, normalized);
+    return this.matchRepo.findOne({ where: { id } });
+  }
+
   async deleteMatch(id: number) { return this.matchRepo.delete(id); }
 
   private calcDist(lat1: number, lon1: number, lat2: number, lon2: number) {
