@@ -6,10 +6,23 @@
         <h1 class="text-2xl font-black tracking-widest uppercase text-gold flex items-center gap-2 drop-shadow-md">
           ⚽ FC Đá Bay Bóng
         </h1>
-        <nav class="hidden md:flex gap-6 font-semibold">
+        
+        <!-- Chỉ hiển thị Menu khi đã có user đăng nhập -->
+        <nav v-if="user" class="hidden md:flex items-center gap-6 font-semibold text-sm uppercase tracking-wider">
           <router-link to="/" class="hover:text-gold transition-colors duration-300 hover:scale-105">Trang chủ</router-link>
           <router-link to="/players" class="hover:text-gold transition-colors duration-300 hover:scale-105">Đội Hình</router-link>
           <router-link to="/funds" class="hover:text-gold transition-colors duration-300 hover:scale-105">Quỹ Đội</router-link>
+          <router-link :to="'/profile/' + user.id" class="hover:text-gold transition-colors duration-300 hover:scale-105">Hồ Sơ</router-link>
+          
+          <!-- Chỉ hiển thị nút Admin nếu role là admin -->
+          <router-link v-if="user.role === 'admin'" to="/admin" class="text-red-400 hover:text-red-300 transition-colors duration-300 hover:scale-105 border border-red-500/30 bg-red-500/10 px-3 py-1 rounded">
+            Admin
+          </router-link>
+
+          <!-- Nút Đăng Xuất -->
+          <button @click="logout" class="ml-2 bg-white/10 hover:bg-red-500 text-white border border-white/20 hover:border-red-400 px-4 py-1.5 rounded-full font-bold transition-all duration-300">
+            Đăng xuất
+          </button>
         </nav>
       </div>
     </header>
@@ -29,7 +42,27 @@
 </template>
 
 <script setup>
+import { ref, watchEffect } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import ToastPopup from './components/ToastPopup.vue';
+
+const router = useRouter();
+const route = useRoute();
+const user = ref(null);
+
+// Lắng nghe sự thay đổi của route để cập nhật lại trạng thái user
+watchEffect(() => {
+  // Gắn route.path vào để trigger watchEffect mỗi khi chuyển trang
+  const currentPath = route.path; 
+  user.value = JSON.parse(localStorage.getItem('fcdbb_user') || 'null');
+});
+
+const logout = () => {
+  localStorage.removeItem('fcdbb_token');
+  localStorage.removeItem('fcdbb_user');
+  user.value = null;
+  router.push('/login');
+};
 </script>
 
 <style>
