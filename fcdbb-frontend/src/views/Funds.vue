@@ -25,7 +25,7 @@
           <td>{{ f.amount.toLocaleString() }}đ</td>
           <td class="max-w-[200px] truncate" :title="f.reason">{{ f.reason }}</td>
           <td class="text-center">
-            <button v-if="f.proof_image" @click="viewImage('http://localhost:3000' + f.proof_image)" class="text-blue-400 hover:text-blue-300 underline text-xs">📷 Xem ảnh</button>
+            <button v-if="f.proof_image" @click="viewImage(f.proof_image)" class="text-blue-400 hover:text-blue-300 underline text-xs">📷 Xem ảnh</button>
           </td>
           <td v-if="isAdmin" class="text-right">
             <button @click="deleteFund(f.id)" class="text-red-400 hover:text-red-300 text-xs ml-2">Xóa</button>
@@ -34,7 +34,6 @@
       </table>
     </div>
 
-    <!-- IMAGE MODAL -->
     <div v-if="modalImg" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4" @click="modalImg = null">
       <div class="relative max-w-3xl max-h-[90vh]">
         <button class="absolute -top-10 right-0 font-bold text-xl text-white hover:text-red-400">Đóng (X)</button>
@@ -43,17 +42,28 @@
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
-const API = '${API}';
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const funds = ref([]);
-const isAdmin = JSON.parse(localStorage.getItem('fcdbb_user'))?.role === 'admin';
+const isAdmin = JSON.parse(localStorage.getItem('fcdbb_user') || '{}')?.role === 'admin';
 const form = ref({ type: 'THU', amount: '', reason: '', file: null });
 const modalImg = ref(null);
 
-const balance = computed(() => funds.value.reduce((acc, curr) => curr.type === 'THU' ? acc + curr.amount : acc - curr.amount, 0));
-const load = async () => { const res = await axios.get(`${API}/funds`); funds.value = res.data; };
+const balance = computed(() => {
+  if (!funds.value || !Array.isArray(funds.value)) return 0;
+  return funds.value.reduce((acc, curr) => curr.type === 'THU' ? acc + curr.amount : acc - curr.amount, 0);
+});
+
+const load = async () => { 
+  try {
+    const res = await axios.get(`${API}/funds`); 
+    funds.value = res.data || []; 
+  } catch (e) { console.error("Lỗi load quỹ:", e); }
+};
 onMounted(load);
 
 const viewImage = (url) => { modalImg.value = url; };
@@ -63,12 +73,19 @@ const addFund = async () => {
   const fd = new FormData();
   fd.append('type', form.value.type); fd.append('amount', form.value.amount); fd.append('reason', form.value.reason);
   if(form.value.file) fd.append('file', form.value.file);
-  await axios.post(`${API}/funds`, fd);
-  form.value = { type: 'THU', amount: '', reason: '', file: null };
-  load(); alert('Đã lưu giao dịch!');
+  try {
+    await axios.post(`${API}/funds`, fd);
+    form.value = { type: 'THU', amount: '', reason: '', file: null };
+    load(); alert('Đã lưu giao dịch!');
+  } catch (e) { alert("Lỗi lưu quỹ!"); }
 };
 
 const deleteFund = async (id) => {
-  if(confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) { await axios.delete(`${API}/funds/${id}`); load(); }
+  if(confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) { 
+    try {
+      await axios.delete(`${API}/funds/${id}`); 
+      load(); 
+    } catch (e) { alert("Lỗi xóa!"); }
+  }
 };
 </script>

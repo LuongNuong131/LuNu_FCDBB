@@ -5,7 +5,6 @@
       <button @click="tab = 'users'" :class="tab === 'users' ? 'text-blue-400 font-bold border-b-2 border-blue-400' : 'text-gray-400'" class="px-4 py-2">👥 Tổng kho Cầu Thủ</button>
     </div>
 
-    <!-- TAB MATCHES -->
     <div v-if="tab === 'matches'" class="space-y-6">
       <div class="glass-panel">
         <h2 class="text-xl font-bold text-blue-200 mb-4">{{ isEditing ? 'Sửa Trận Bóng' : 'Tạo Trận Bóng Mới' }}</h2>
@@ -53,7 +52,6 @@
       </div>
     </div>
 
-    <!-- TAB USERS -->
     <div v-if="tab === 'users'" class="space-y-6">
       <div class="glass-panel mb-6">
         <h2 class="text-xl font-bold mb-4">Tạo Tài Khoản Mới</h2>
@@ -93,7 +91,8 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
-const API = '${API}';
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const tab = ref('matches');
 const allMatches = ref([]);
 const users = ref([]);
@@ -103,15 +102,17 @@ const match = ref({ id: null, title: '', location_name: '', lat: '', lng: '', ma
 const newUser = ref({ username: '', password: '', name: '' });
 
 const loadAdminData = async () => {
-  // Đổi từ API /home (chỉ 3 trận) sang API /matches (tất cả trận đấu)
-  const [resM, resU] = await Promise.all([axios.get(`${API}/matches`), axios.get(`${API}/users`)]);
-  allMatches.value = resM.data;
-  users.value = resU.data;
+  try {
+    const [resM, resU] = await Promise.all([axios.get(`${API}/matches`), axios.get(`${API}/users`)]);
+    allMatches.value = resM.data || [];
+    users.value = resU.data || [];
+  } catch(e) { console.error("Lỗi load admin data:", e); }
 };
 onMounted(loadAdminData);
 
 const uniqueLocations = computed(() => {
   const locs = []; const map = new Map();
+  if (!allMatches.value || !Array.isArray(allMatches.value)) return locs;
   allMatches.value.forEach(m => {
     if(!map.has(m.location_name)) { map.set(m.location_name, true); locs.push({ name: m.location_name, lat: m.lat, lng: m.lng, map_link: m.map_link }); }
   });
@@ -127,9 +128,11 @@ const getGPS = () => navigator.geolocation.getCurrentPosition(pos => { match.val
 const isMatchActive = (endTime) => new Date(endTime) > new Date();
 
 const saveMatch = async () => {
-  if (isEditing.value) await axios.put(`${API}/matches/${match.value.id}`, match.value);
-  else await axios.post(`${API}/matches`, match.value);
-  alert('Lưu trận thành công!'); resetMatchForm(); loadAdminData();
+  try {
+    if (isEditing.value) await axios.put(`${API}/matches/${match.value.id}`, match.value);
+    else await axios.post(`${API}/matches`, match.value);
+    alert('Lưu trận thành công!'); resetMatchForm(); loadAdminData();
+  } catch(e) { alert("Lỗi lưu trận!"); }
 };
 const editMatch = (m) => { match.value = { ...m, start_time: m.start_time.slice(0,16), lock_time: m.lock_time.slice(0,16), end_time: m.end_time.slice(0,16) }; isEditing.value = true; };
 const stopMatch = async (id) => {
@@ -138,7 +141,7 @@ const stopMatch = async (id) => {
   }
 };
 const deleteMatch = async (id) => { if(confirm('Xóa VĨNH VIỄN trận này và mọi dữ liệu điểm danh?')) { await axios.delete(`${API}/matches/${id}`); loadAdminData(); }};
-const resetMatchForm = () => { match.value = { id: null, title: '', location_name: '', lat: '', lng: '', start_time: '', lock_time: '', end_time: '' }; isEditing.value = false; };
+const resetMatchForm = () => { match.value = { id: null, title: '', location_name: '', lat: '', lng: '', map_link: '', start_time: '', lock_time: '', end_time: '' }; isEditing.value = false; };
 
 const createUser = async () => { await axios.post(`${API}/users`, newUser.value); newUser.value = { username: '', password: '', name: '' }; loadAdminData(); alert('Tạo thành công!'); };
 const saveUserRole = async (u) => { await axios.put(`${API}/users/${u.id}`, { role: u.role }); alert('Cập nhật quyền thành công!'); };

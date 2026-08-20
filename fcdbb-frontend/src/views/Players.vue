@@ -4,7 +4,7 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
       <router-link :to="'/profile/'+p.id" v-for="p in players" :key="p.id" class="glass-panel text-center hover:scale-105 transition-transform cursor-pointer !p-4">
         <div class="relative w-24 h-24 mx-auto mb-3">
-          <img :src="'http://localhost:3000' + p.avatar" class="w-full h-full rounded-full object-cover border-2 border-white/10">
+          <img :src="p.avatar" class="w-full h-full rounded-full object-cover border-2 border-white/10">
           <span v-if="p.role === 'admin'" class="absolute -bottom-2 right-0 bg-red-500 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">Sếp</span>
         </div>
         <h3 class="font-bold">{{ p.name }}</h3>
@@ -19,11 +19,13 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const players = ref([]);
 
 onMounted(async () => {
-  const res = await axios.get('${API}/users');
-  // Không còn filter giấu admin nữa, tất cả đều được hiển thị
-  players.value = res.data;
+  try {
+    const res = await axios.get(`${API}/users`);
+    players.value = res.data || [];
+  } catch (e) { console.error("Lỗi load player:", e); }
 });
 </script>
