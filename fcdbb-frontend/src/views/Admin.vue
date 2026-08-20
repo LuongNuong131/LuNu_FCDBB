@@ -1,84 +1,121 @@
 <template>
-  <div class="w-full max-w-6xl space-y-6">
-    <div class="flex gap-2 mb-4 border-b border-white/20 pb-2">
-      <button @click="tab = 'matches'" :class="tab === 'matches' ? 'text-blue-400 font-bold border-b-2 border-blue-400' : 'text-gray-400'" class="px-4 py-2">⚽ Quản lý Trận</button>
-      <button @click="tab = 'users'" :class="tab === 'users' ? 'text-blue-400 font-bold border-b-2 border-blue-400' : 'text-gray-400'" class="px-4 py-2">👥 Tổng kho Cầu Thủ</button>
+  <div class="w-full max-w-6xl space-y-6 mx-auto">
+    <!-- Header Tabs -->
+    <div class="flex gap-4 mb-8 border-b border-white/10 pb-4">
+      <button @click="tab = 'matches'" :class="tab === 'matches' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] border-blue-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'" class="px-6 py-2.5 rounded-full font-bold transition-all duration-300 border border-transparent flex items-center gap-2">
+        <span class="text-xl">⚽</span> Quản lý Trận Đấu
+      </button>
+      <button @click="tab = 'users'" :class="tab === 'users' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] border-blue-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'" class="px-6 py-2.5 rounded-full font-bold transition-all duration-300 border border-transparent flex items-center gap-2">
+        <span class="text-xl">👥</span> Tổng Kho Cầu Thủ
+      </button>
     </div>
 
-    <div v-if="tab === 'matches'" class="space-y-6">
-      <div class="glass-panel">
-        <h2 class="text-xl font-bold text-blue-200 mb-4">{{ isEditing ? 'Sửa Trận Bóng' : 'Tạo Trận Bóng Mới' }}</h2>
-        <div class="mb-4" v-if="!isEditing && uniqueLocations.length > 0">
-          <label class="text-xs text-gray-400 block mb-1">Chọn sân quen thuộc:</label>
-          <select @change="applyFamiliarLocation" class="glass-input !w-full md:!w-1/2">
-            <option value="">-- Click để chọn sân cũ --</option>
-            <option v-for="(l, i) in uniqueLocations" :key="i" :value="i">{{ l.name }}</option>
-          </select>
-        </div>
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <input v-model="match.title" placeholder="Tên trận (VD: Giao hữu ABC)" class="glass-input col-span-2 md:col-span-1">
-          <div class="flex gap-2">
-            <input v-model="match.location_name" placeholder="Tên Sân" class="glass-input flex-1">
-            <button @click="getGPS" class="bg-indigo-600 px-3 rounded-lg text-xs font-bold hover:bg-indigo-500 whitespace-nowrap">📍 Lấy GPS</button>
+    <!-- Match Tab -->
+    <div v-if="tab === 'matches'" class="grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <div class="glass-panel">
+          <h2 class="text-xl font-black text-gold uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-white/10 pb-3">
+            {{ isEditing ? '✏️ Sửa Trận Bóng' : '✨ Tạo Trận Mới' }}
+          </h2>
+          
+          <div class="mb-5" v-if="!isEditing && uniqueLocations.length > 0">
+            <label class="text-xs font-bold uppercase tracking-wide text-blue-300 block mb-2">Sân quen thuộc</label>
+            <select @change="applyFamiliarLocation" class="glass-input">
+              <option value="">-- Click để chọn form sân cũ --</option>
+              <option v-for="(l, i) in uniqueLocations" :key="i" :value="i">{{ l.name }}</option>
+            </select>
           </div>
-          <input v-model="match.lat" type="number" placeholder="Vĩ độ (Lat)" class="glass-input">
-          <input v-model="match.lng" type="number" placeholder="Kinh độ (Lng)" class="glass-input">
-          <div><label class="text-xs text-gray-400">Bắt đầu</label><input v-model="match.start_time" type="datetime-local" class="glass-input"></div>
-          <div><label class="text-xs text-yellow-400">Khóa ĐD đúng giờ</label><input v-model="match.lock_time" type="datetime-local" class="glass-input"></div>
-          <div><label class="text-xs text-red-400">Chốt sổ vắng mặt</label><input v-model="match.end_time" type="datetime-local" class="glass-input"></div>
-          <input v-model="match.map_link" placeholder="Link Google Map" class="glass-input">
-        </div>
-        <div class="flex gap-4">
-          <button @click="saveMatch" class="glass-btn !bg-green-600">{{ isEditing ? 'Lưu Thay Đổi' : 'Tạo Trận' }}</button>
-          <button v-if="isEditing" @click="resetMatchForm" class="glass-btn !bg-gray-600">Hủy</button>
-        </div>
-      </div>
-
-      <div class="glass-panel">
-        <h2 class="text-xl font-bold mb-4">Danh sách Trận đấu (Toàn bộ)</h2>
-        <div class="space-y-2 max-h-96 overflow-y-auto pr-2">
-          <div v-for="m in allMatches" :key="m.id" class="bg-white/5 p-3 rounded-lg border border-white/10 flex justify-between items-center">
+          
+          <div class="space-y-4 mb-6">
+            <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Tên Trận</label><input v-model="match.title" placeholder="VD: Giao hữu ABC" class="glass-input"></div>
+            
             <div>
-              <p class="font-bold text-blue-200">{{ m.title }} <span class="text-xs text-gray-400">({{ new Date(m.start_time).toLocaleDateString('vi-VN') }})</span></p>
-              <p class="text-xs">Sân: {{ m.location_name }}</p>
+              <label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Sân & Vị trí</label>
+              <div class="flex gap-2 mb-2">
+                <input v-model="match.location_name" placeholder="Tên Sân" class="glass-input flex-1">
+                <button @click="getGPS" class="bg-indigo-600 border border-indigo-400/50 px-4 rounded-lg text-xs font-bold hover:bg-indigo-500 whitespace-nowrap shadow-lg flex items-center gap-1">📍 Lấy GPS</button>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <input v-model="match.lat" type="number" placeholder="Vĩ độ (Lat)" class="glass-input font-mono text-sm">
+                <input v-model="match.lng" type="number" placeholder="Kinh độ (Lng)" class="glass-input font-mono text-sm">
+              </div>
             </div>
-            <div class="flex gap-2">
-              <button v-if="isMatchActive(m.end_time)" @click="editMatch(m)" class="bg-yellow-600/80 px-3 py-1 rounded text-xs hover:bg-yellow-500">Sửa</button>
-              <button v-if="isMatchActive(m.end_time)" @click="stopMatch(m.id)" class="bg-orange-600/80 px-3 py-1 rounded text-xs hover:bg-orange-500">Dừng</button>
-              <button @click="deleteMatch(m.id)" class="bg-red-600/80 px-3 py-1 rounded text-xs hover:bg-red-500">Xóa</button>
+            
+            <div><label class="text-xs font-bold uppercase tracking-wide text-green-400 mb-1 block">Bắt đầu</label><input v-model="match.start_time" type="datetime-local" class="glass-input font-mono text-sm"></div>
+            <div><label class="text-xs font-bold uppercase tracking-wide text-yellow-400 mb-1 block">Khóa điểm danh (Đúng giờ)</label><input v-model="match.lock_time" type="datetime-local" class="glass-input font-mono text-sm"></div>
+            <div><label class="text-xs font-bold uppercase tracking-wide text-red-400 mb-1 block">Chốt sổ (Kết thúc)</label><input v-model="match.end_time" type="datetime-local" class="glass-input font-mono text-sm"></div>
+            <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Bản đồ</label><input v-model="match.map_link" placeholder="Link Google Map" class="glass-input text-sm text-blue-300"></div>
+          </div>
+          
+          <div class="flex gap-3">
+            <button @click="saveMatch" class="glass-btn !bg-gradient-to-r !from-green-600 !to-emerald-500 border-green-400/50 flex-1">{{ isEditing ? 'Lưu Thay Đổi' : 'Tạo Trận Này' }}</button>
+            <button v-if="isEditing" @click="resetMatchForm" class="bg-gray-700 border border-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 transition-colors">Hủy</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-3">
+        <div class="glass-panel h-full">
+          <h2 class="text-xl font-black text-blue-200 uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-white/10 pb-3">
+            📋 Toàn bộ Trận Đấu
+          </h2>
+          <div class="space-y-3 max-h-[700px] overflow-y-auto pr-2">
+            <div v-for="m in allMatches" :key="m.id" class="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col sm:flex-row justify-between sm:items-center gap-4 hover:bg-white/10 transition-colors">
+              <div>
+                <p class="font-black text-lg text-white mb-1">{{ m.title }}</p>
+                <p class="text-sm font-mono text-blue-300 mb-1">{{ new Date(m.start_time).toLocaleString('vi-VN') }}</p>
+                <p class="text-xs text-gray-400 flex items-center gap-1">📍 {{ m.location_name }}</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button v-if="isMatchActive(m.end_time)" @click="editMatch(m)" class="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-4 py-2 rounded-lg text-xs font-bold hover:bg-yellow-500/30 transition">Sửa</button>
+                <button v-if="isMatchActive(m.end_time)" @click="stopMatch(m.id)" class="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-4 py-2 rounded-lg text-xs font-bold hover:bg-orange-500/30 transition">Đóng Sổ</button>
+                <button @click="deleteMatch(m.id)" class="bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-500/30 transition">Xóa</button>
+              </div>
             </div>
+            <div v-if="allMatches.length === 0" class="text-center p-8 text-gray-500 italic">Chưa có trận đấu nào.</div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Users Tab -->
     <div v-if="tab === 'users'" class="space-y-6">
-      <div class="glass-panel mb-6">
-        <h2 class="text-xl font-bold mb-4">Tạo Tài Khoản Mới</h2>
-        <div class="flex gap-4">
-          <input v-model="newUser.username" placeholder="Tài khoản (vd: luong)" class="glass-input">
-          <input v-model="newUser.password" placeholder="Mật khẩu" class="glass-input">
-          <input v-model="newUser.name" placeholder="Họ và tên" class="glass-input">
-          <button @click="createUser" class="glass-btn !w-32">Tạo</button>
+      <div class="glass-panel">
+        <h2 class="text-xl font-black text-gold uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-white/10 pb-3">
+          ✨ Cấp Tài Khoản Cầu Thủ
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Username</label><input v-model="newUser.username" placeholder="vd: luong123" class="glass-input"></div>
+          <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Mật khẩu</label><input v-model="newUser.password" placeholder="••••••••" class="glass-input"></div>
+          <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Họ & Tên</label><input v-model="newUser.name" placeholder="Tên hiển thị" class="glass-input"></div>
+          <button @click="createUser" class="glass-btn !bg-gradient-to-r !from-green-600 !to-emerald-500 h-[50px]">Tạo Mới</button>
         </div>
       </div>
 
-      <div class="glass-panel overflow-x-auto">
-        <table class="w-full text-left text-sm">
-          <thead><tr class="border-b border-white/20"><th class="p-2">TK</th><th class="p-2">Tên</th><th class="p-2">Quyền (Role)</th><th class="p-2 text-right">Hành động</th></tr></thead>
+      <div class="glass-panel overflow-x-auto p-0 rounded-2xl border border-white/20">
+        <table class="w-full text-left text-sm whitespace-nowrap">
+          <thead class="bg-black/40">
+            <tr>
+              <th class="p-4 font-bold text-blue-300 uppercase tracking-wider">Tài khoản</th>
+              <th class="p-4 font-bold text-blue-300 uppercase tracking-wider">Tên hiển thị</th>
+              <th class="p-4 font-bold text-blue-300 uppercase tracking-wider">Chức vụ</th>
+              <th class="p-4 font-bold text-blue-300 uppercase tracking-wider text-right">Điều khiển</th>
+            </tr>
+          </thead>
           <tbody>
-            <tr v-for="u in users" :key="u.id" class="border-b border-white/5 hover:bg-white/5">
-              <td class="p-2 font-mono text-blue-300">{{ u.username }}</td>
-              <td class="p-2">{{ u.name }}</td>
-              <td class="p-2">
-                <select v-model="u.role" @change="saveUserRole(u)" class="bg-gray-800 text-xs p-1 rounded border border-gray-600" :disabled="u.username === 'admin'">
-                  <option value="user">User (Cầu thủ)</option><option value="admin">Admin (Quản lý)</option>
+            <tr v-for="u in users" :key="u.id" class="border-t border-white/5 hover:bg-white/5 transition-colors">
+              <td class="p-4 font-mono font-bold text-gray-300">{{ u.username }}</td>
+              <td class="p-4 font-semibold text-white">{{ u.name }}</td>
+              <td class="p-4">
+                <select v-model="u.role" @change="saveUserRole(u)" class="bg-[#0f172a] text-xs p-2 rounded-lg border border-white/20 text-white font-bold outline-none focus:border-blue-400" :disabled="u.username === 'admin'">
+                  <option value="user">USER (Cầu thủ)</option>
+                  <option value="admin">ADMIN (Quản lý)</option>
                 </select>
               </td>
-              <td class="p-2 flex gap-2 justify-end">
-                <router-link :to="'/profile/'+u.id" class="bg-blue-500/80 px-2 py-1 rounded text-xs">HS</router-link>
-                <button @click="resetPass(u.id)" class="bg-yellow-600/80 px-2 py-1 rounded text-xs">MK</button>
-                <button @click="deleteUser(u.id)" v-if="u.username !== 'admin'" class="bg-red-500/80 px-2 py-1 rounded text-xs">Xóa</button>
+              <td class="p-4 flex gap-2 justify-end">
+                <router-link :to="'/profile/'+u.id" class="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-500/30 transition">Hồ Sơ</router-link>
+                <button @click="resetPass(u.id)" class="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1.5 rounded text-xs font-bold hover:bg-yellow-500/30 transition">Reset MK</button>
+                <button @click="deleteUser(u.id)" v-if="u.username !== 'admin'" class="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 rounded text-xs font-bold hover:bg-red-500/30 transition">Xóa</button>
               </td>
             </tr>
           </tbody>
