@@ -14,6 +14,7 @@
           <router-link to="/" class="nav-link">Tổng quan</router-link>
           <router-link to="/players" class="nav-link">Đội hình</router-link>
           <router-link to="/funds" class="nav-link">Quỹ đội</router-link>
+          <router-link to="/blog" class="nav-link">Blog</router-link>
           <router-link :to="'/profile/' + user.id" class="nav-link">Hồ sơ</router-link>
           <router-link v-if="user.role === 'admin'" to="/admin" class="nav-link !text-rose-300 hover:!text-rose-200">Quản trị</router-link>
         </nav>
@@ -34,6 +35,7 @@
           <router-link to="/" class="nav-link" @click="mobileNavOpen = false">Tổng quan</router-link>
           <router-link to="/players" class="nav-link" @click="mobileNavOpen = false">Đội hình</router-link>
           <router-link to="/funds" class="nav-link" @click="mobileNavOpen = false">Quỹ đội</router-link>
+          <router-link to="/blog" class="nav-link" @click="mobileNavOpen = false">Blog khoảnh khắc</router-link>
           <router-link :to="'/profile/' + user.id" class="nav-link" @click="mobileNavOpen = false">Hồ sơ cá nhân</router-link>
           <router-link v-if="user.role === 'admin'" to="/admin" class="nav-link !text-rose-300" @click="mobileNavOpen = false">Khu vực quản trị</router-link>
           <button @click="logout" class="mt-1 w-full rounded-xl border border-rose-300/20 bg-rose-400/10 px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-[.14em] text-rose-200">Đăng xuất</button>

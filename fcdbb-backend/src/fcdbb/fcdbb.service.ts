@@ -1,11 +1,11 @@
-import { Injectable, OnModuleInit, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, OnModuleInit, UnauthorizedException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, LessThanOrEqual } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcrypt';
 import * as path from 'path';
-import { User, Match, Attendance, Fund } from './entities/fcdbb.entity';
+import { User, Match, Attendance, Fund, BlogPost } from './entities/fcdbb.entity';
 
 @Injectable()
 export class FcdbbService implements OnModuleInit {
@@ -16,6 +16,7 @@ export class FcdbbService implements OnModuleInit {
     @InjectRepository(Match) private matchRepo: Repository<Match>,
     @InjectRepository(Attendance) private attendanceRepo: Repository<Attendance>,
     @InjectRepository(Fund) private fundRepo: Repository<Fund>,
+    @InjectRepository(BlogPost) private blogRepo: Repository<BlogPost>,
     private jwtService: JwtService,
   ) {
     // Thêm dấu ! để báo cho TypeScript biết chắc chắn biến này tồn tại
@@ -213,6 +214,57 @@ export class FcdbbService implements OnModuleInit {
   }
 
   async getFunds() { return this.fundRepo.find({ order: { created_at: 'DESC' } }); }
+
+  async getBlogPosts() {
+    return this.blogRepo.find({ order: { created_at: 'DESC' } });
+  }
+
+  private getAdminFromToken(authorization?: string) {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    if (!token) throw new ForbiddenException('Bạn cần đăng nhập bằng tài khoản admin.');
+    try {
+      const payload = this.jwtService.verify(token);
+      if (payload?.role !== 'admin') throw new ForbiddenException('Chỉ admin mới có quyền quản lý blog.');
+      return payload;
+    } catch (error) {
+      if (error instanceof ForbiddenException) throw error;
+      throw new ForbiddenException('Phiên admin không hợp lệ hoặc đã hết hạn.');
+    }
+  }
+
+  async createBlogPost(data: Partial<BlogPost>, image?: Express.Multer.File, authorization?: string) {
+    const admin = this.getAdminFromToken(authorization);
+    const imageUrl = image ? await this.uploadImageToBucket(image, 'blog') : data.image_url;
+    if (!data.title?.trim()) throw new BadRequestException('Tiêu đề bài viết không được để trống.');
+    return this.blogRepo.save(this.blogRepo.create({
+      title: data.title.trim(),
+      excerpt: data.excerpt?.trim() || undefined,
+      content: data.content?.trim() || undefined,
+      image_url: imageUrl || undefined,
+      author_id: Number(admin.sub),
+    }));
+  }
+
+  async updateBlogPost(id: number, data: Partial<BlogPost>, image?: Express.Multer.File, authorization?: string) {
+    this.getAdminFromToken(authorization);
+    const post = await this.blogRepo.findOne({ where: { id } });
+    if (!post) throw new BadRequestException('Bài viết không tồn tại.');
+    const imageUrl = image ? await this.uploadImageToBucket(image, 'blog') : data.image_url;
+    await this.blogRepo.update(id, {
+      title: data.title?.trim() || post.title,
+      excerpt: data.excerpt?.trim() ?? post.excerpt,
+      content: data.content?.trim() ?? post.content,
+      image_url: imageUrl || post.image_url,
+    });
+    return this.blogRepo.findOne({ where: { id } });
+  }
+
+  async deleteBlogPost(id: number, authorization?: string) {
+    this.getAdminFromToken(authorization);
+    const result = await this.blogRepo.delete(id);
+    if (!result.affected) throw new BadRequestException('Bài viết không tồn tại.');
+    return { message: 'Đã xóa bài viết.' };
+  }
   
   async deleteFund(id: number) { 
     const fund = await this.fundRepo.findOne({ where: { id } });
@@ -227,6 +279,18 @@ export class FcdbbService implements OnModuleInit {
   }
   
   async updateFund(id: number, data: Partial<Fund>) { return this.fundRepo.update(id, data); }
+
+  private async uploadImageToBucket(file: Express.Multer.File, folder: string) {
+    if (!file) return undefined;
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileName = `${folder}/${Date.now()}_${safeName}`;
+    const { error } = await this.supabase.storage.from('uploads').upload(fileName, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false,
+    });
+    if (error) throw new BadRequestException(`Lỗi upload ảnh: ${error.message}`);
+    return this.supabase.storage.from('uploads').getPublicUrl(fileName).data.publicUrl;
+  }
 
   async createFund(data: Partial<Fund>, file?: Express.Multer.File) {
     if (file) {

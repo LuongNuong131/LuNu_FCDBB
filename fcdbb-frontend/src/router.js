@@ -4,6 +4,7 @@ import Home from './views/Home.vue'
 import Profile from './views/Profile.vue'
 import Players from './views/Players.vue'
 import Funds from './views/Funds.vue'
+import Blog from './views/Blog.vue'
 import Admin from './views/Admin.vue'
 
 const routes = [
@@ -12,6 +13,7 @@ const routes = [
   { path: '/profile/:id', component: Profile, meta: { requiresAuth: true } },
   { path: '/players', component: Players, meta: { requiresAuth: true } },
   { path: '/funds', component: Funds, meta: { requiresAuth: true } },
+  { path: '/blog', component: Blog, meta: { requiresAuth: true } },
   { path: '/admin', component: Admin, meta: { requiresAuth: true, requiresAdmin: true } }
 ]
 

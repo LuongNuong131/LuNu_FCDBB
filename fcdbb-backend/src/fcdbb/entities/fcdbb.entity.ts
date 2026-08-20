@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 
 @Entity('users')
 export class User {
@@ -52,4 +52,16 @@ export class Fund {
   @Column() reason: string;
   @Column({ nullable: true }) proof_image: string;
   @CreateDateColumn() created_at: Date;
+}
+
+@Entity('blog_posts')
+export class BlogPost {
+  @PrimaryGeneratedColumn() id: number;
+  @Column() title: string;
+  @Column({ nullable: true, type: 'text' }) excerpt: string;
+  @Column({ nullable: true, type: 'text' }) content: string;
+  @Column({ nullable: true }) image_url: string;
+  @Column({ nullable: true }) author_id: number;
+  @CreateDateColumn() created_at: Date;
+  @UpdateDateColumn() updated_at: Date;
 }

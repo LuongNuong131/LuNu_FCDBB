@@ -3,11 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { FcdbbController } from './fcdbb.controller';
 import { FcdbbService } from './fcdbb.service';
-import { User, Match, Attendance, Fund } from './entities/fcdbb.entity';
+import { User, Match, Attendance, Fund, BlogPost } from './entities/fcdbb.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Match, Attendance, Fund]),
+    TypeOrmModule.forFeature([User, Match, Attendance, Fund, BlogPost]),
     JwtModule.register({
       secret: 'TrungTinhYeuLuNu131',
       signOptions: { expiresIn: '7d' },

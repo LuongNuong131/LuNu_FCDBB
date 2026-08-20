@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Param, Body, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Headers } from '@nestjs/common';
 import { FcdbbService } from './fcdbb.service';
 
 @Controller('api')
@@ -32,6 +33,11 @@ export class FcdbbController {
   @Post('attendance/checkin') checkin(@Body() body: any) { return this.srv.checkin(body.userId, body.matchId, body.lat, body.lng); }
 
   @Get('funds') getFunds() { return this.srv.getFunds(); }
+
+  @Get('blog') getBlogPosts() { return this.srv.getBlogPosts(); }
+  @Post('blog') @UseInterceptors(FileInterceptor('image')) createBlogPost(@Body() body: any, @UploadedFile() image: Express.Multer.File, @Headers('authorization') authorization?: string) { return this.srv.createBlogPost(body, image, authorization); }
+  @Put('blog/:id') @UseInterceptors(FileInterceptor('image')) updateBlogPost(@Param('id') id: number, @Body() body: any, @UploadedFile() image: Express.Multer.File, @Headers('authorization') authorization?: string) { return this.srv.updateBlogPost(id, body, image, authorization); }
+  @Delete('blog/:id') deleteBlogPost(@Param('id') id: number, @Headers('authorization') authorization?: string) { return this.srv.deleteBlogPost(id, authorization); }
   @Put('funds/:id') updateFund(@Param('id') id: number, @Body() body: any) { return this.srv.updateFund(id, body); }
   @Delete('funds/:id') deleteFund(@Param('id') id: number) { return this.srv.deleteFund(id); }
   @Post('funds') @UseInterceptors(FileInterceptor('file')) createFund(@Body() body: any, @UploadedFile() file: Express.Multer.File) { return this.srv.createFund(body, file); }
