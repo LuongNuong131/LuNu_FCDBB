@@ -1,17 +1,19 @@
 <template>
-  <div class="flex items-center justify-center min-h-[80vh]">
-    <div class="glass-panel w-full max-w-md p-8">
-      <h2 class="text-3xl font-bold text-center mb-8 text-blue-200">Đăng Nhập FCDBB</h2>
-      <div class="space-y-4">
+  <div class="flex items-center justify-center min-h-[80vh] w-full">
+    <div class="glass-panel w-full max-w-md p-8 text-center">
+      <div class="badge-crest mx-auto mb-4">⚽</div>
+      <p class="section-eyebrow mb-1">FC ĐẠI BÀNG BÌNH DƯƠNG</p>
+      <h2 class="text-3xl font-bold mb-8 text-chalk-050">Đăng Nhập</h2>
+      <div class="space-y-4 text-left">
         <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Tài khoản</label>
-          <input v-model="username" type="text" class="glass-input !w-full" placeholder="Nhập username" @keyup.enter="login">
+          <label class="block text-xs font-semibold uppercase tracking-wide text-chalk-muted mb-1.5">Tài khoản</label>
+          <input v-model="username" type="text" class="glass-input" placeholder="Nhập username" @keyup.enter="login">
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Mật khẩu</label>
-          <input v-model="password" type="password" class="glass-input !w-full" placeholder="Nhập mật khẩu" @keyup.enter="login">
+          <label class="block text-xs font-semibold uppercase tracking-wide text-chalk-muted mb-1.5">Mật khẩu</label>
+          <input v-model="password" type="password" class="glass-input" placeholder="Nhập mật khẩu" @keyup.enter="login">
         </div>
-        <button @click="login" class="glass-btn w-full mt-6 !bg-blue-600 hover:!bg-blue-500">ĐĂNG NHẬP</button>
+        <button @click="login" class="glass-btn btn-gold mt-2">Vào Sân →</button>
       </div>
     </div>
   </div>
