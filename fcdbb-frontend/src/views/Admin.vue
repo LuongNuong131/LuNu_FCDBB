@@ -93,7 +93,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
-const API = 'http://localhost:3000/api';
+const API = '${API}';
 const tab = ref('matches');
 const allMatches = ref([]);
 const users = ref([]);

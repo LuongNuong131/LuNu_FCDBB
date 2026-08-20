@@ -48,7 +48,7 @@ const isOwner = computed(() => currentUser.id == route.params.id);
 const isAdmin = computed(() => currentUser.role === 'admin');
 
 onMounted(async () => {
-  const res = await axios.get(`http://localhost:3000/api/users/${route.params.id}`);
+  const res = await axios.get(`${API}/users/${route.params.id}`);
   profile.value = res.data;
 });
 
@@ -57,7 +57,7 @@ const uploadAvatar = async (event) => {
   if (!file) return;
   const formData = new FormData(); formData.append('file', file);
   try {
-    const res = await axios.post(`http://localhost:3000/api/users/${route.params.id}/avatar`, formData);
+    const res = await axios.post(`${API}/users/${route.params.id}/avatar`, formData);
     profile.value.avatar = res.data.avatar;
     if (isOwner.value) { currentUser.avatar = res.data.avatar; localStorage.setItem('fcdbb_user', JSON.stringify(currentUser)); }
     alert('Đổi Avatar thành công!');
@@ -66,7 +66,7 @@ const uploadAvatar = async (event) => {
 
 const save = async () => {
   try {
-    const res = await axios.put(`http://localhost:3000/api/users/${route.params.id}`, profile.value);
+    const res = await axios.put(`${API}/users/${route.params.id}`, profile.value);
     profile.value = res.data;
     alert('Lưu hồ sơ thành công!');
   } catch (e) { alert('Lỗi lưu hồ sơ!'); }

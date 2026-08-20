@@ -15,7 +15,7 @@ const username = ref('');
 const password = ref('');
 const login = async () => {
   try {
-    const res = await axios.post('http://localhost:3000/api/auth/login', { username: username.value, password: password.value });
+    const res = await axios.post(`${API}/auth/login`, { username: username.value, password: password.value });
     localStorage.setItem('fcdbb_token', res.data.token);
     localStorage.setItem('fcdbb_user', JSON.stringify(res.data.user));
     window.location.href = '/';

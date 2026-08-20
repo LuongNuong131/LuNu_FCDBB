@@ -22,7 +22,7 @@ import axios from 'axios';
 const players = ref([]);
 
 onMounted(async () => {
-  const res = await axios.get('http://localhost:3000/api/users');
+  const res = await axios.get('${API}/users');
   // Không còn filter giấu admin nữa, tất cả đều được hiển thị
   players.value = res.data;
 });

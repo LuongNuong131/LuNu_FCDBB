@@ -97,11 +97,11 @@ const formatDelay = (seconds) => {
 };
 
 const loadData = async () => {
-  const res = await axios.get('http://localhost:3000/api/home');
+  const res = await axios.get('${API}/home');
   activeMatch.value = res.data.activeMatch;
   historyMatches.value = res.data.historyMatches;
   if (activeMatch.value) {
-    const det = await axios.get(`http://localhost:3000/api/matches/${activeMatch.value.id}/details`);
+    const det = await axios.get(`${API}/matches/${activeMatch.value.id}/details`);
     activeDetails.value = det.data;
   }
 };
@@ -114,7 +114,7 @@ const checkin = () => {
   navigator.geolocation.getCurrentPosition(
     async pos => {
       try {
-        await axios.post('http://localhost:3000/api/attendance/checkin', {
+        await axios.post(`${API}/attendance/checkin`, {
           userId: user.id, matchId: activeMatch.value.id, lat: pos.coords.latitude, lng: pos.coords.longitude
         });
         alert('Điểm danh thành công!');
@@ -135,7 +135,7 @@ const checkin = () => {
 
 const openModal = async (m) => {
   selectedMatch.value = m;
-  const res = await axios.get(`http://localhost:3000/api/matches/${m.id}/details`);
+  const res = await axios.get(`${API}/matches/${m.id}/details`);
   modalData.value = res.data;
   showModal.value = true;
 };

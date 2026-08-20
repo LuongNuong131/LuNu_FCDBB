@@ -46,7 +46,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
-const API = 'http://localhost:3000/api';
+const API = '${API}';
 const funds = ref([]);
 const isAdmin = JSON.parse(localStorage.getItem('fcdbb_user'))?.role === 'admin';
 const form = ref({ type: 'THU', amount: '', reason: '', file: null });

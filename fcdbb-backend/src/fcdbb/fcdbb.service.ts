@@ -2,20 +2,24 @@ import { Injectable, OnModuleInit, UnauthorizedException, BadRequestException } 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, LessThanOrEqual } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcrypt';
-import * as fs from 'fs';
 import * as path from 'path';
 import { User, Match, Attendance, Fund } from './entities/fcdbb.entity';
 
 @Injectable()
 export class FcdbbService implements OnModuleInit {
+  private supabase: SupabaseClient;
+
   constructor(
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Match) private matchRepo: Repository<Match>,
     @InjectRepository(Attendance) private attendanceRepo: Repository<Attendance>,
     @InjectRepository(Fund) private fundRepo: Repository<Fund>,
     private jwtService: JwtService,
-  ) {}
+  ) {
+    this.supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+  }
 
   async onModuleInit() {
     const admin = await this.userRepo.findOne({ where: { username: 'admin' } });
@@ -56,21 +60,24 @@ export class FcdbbService implements OnModuleInit {
     return { message: 'Đổi mật khẩu thành công' };
   }
 
+  // UPLOAD LÊN SUPABASE STORAGE
   async uploadAvatar(id: number, file: Express.Multer.File) {
     const user = await this.getProfileById(id);
     if (!user) throw new BadRequestException('User not found');
-    const uploadPath = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
 
     const ext = path.extname(file.originalname);
     const dobStr = user.dob ? user.dob.replace(/[-/]/g, '') : 'nodob';
     const filename = `${user.username}_${dobStr}${ext}`;
 
-    const files = fs.readdirSync(uploadPath);
-    for (const f of files) { if (f.startsWith(`${user.username}_`)) fs.unlinkSync(path.join(uploadPath, f)); }
+    const { data, error } = await this.supabase.storage.from('uploads').upload(filename, file.buffer, {
+      contentType: file.mimetype,
+      upsert: true // Bật cái này lên thì ảnh mới sẽ TỰ ĐỘNG ĐÈ ảnh cũ, không bị sinh file rác
+    });
 
-    fs.writeFileSync(path.join(uploadPath, filename), file.buffer);
-    user.avatar = `/uploads/${filename}?t=${Date.now()}`;
+    if (error) throw new BadRequestException('Lỗi tải ảnh lên đám mây!');
+    const publicUrl = this.supabase.storage.from('uploads').getPublicUrl(filename).data.publicUrl;
+    
+    user.avatar = `${publicUrl}?t=${Date.now()}`;
     return this.userRepo.save(user);
   }
 
@@ -126,12 +133,10 @@ export class FcdbbService implements OnModuleInit {
   
   async deleteFund(id: number) { 
     const fund = await this.fundRepo.findOne({ where: { id } });
-    if (fund && fund.proof_image) {
-      // Tìm file ảnh cũ và xóa đi
-      const imagePath = path.join(process.cwd(), 'public', fund.proof_image);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
+    // Nếu có ảnh minh chứng, gọi API Supabase xóa ảnh trên mây
+    if (fund && fund.proof_image && fund.proof_image.includes('supabase.co')) {
+      const fileName = fund.proof_image.split('/').pop();
+      await this.supabase.storage.from('uploads').remove([fileName.split('?')[0]]);
     }
     return this.fundRepo.delete(id); 
   }
@@ -140,13 +145,17 @@ export class FcdbbService implements OnModuleInit {
 
   async createFund(data: Partial<Fund>, file?: Express.Multer.File) {
     if (file) {
-      const uploadPath = path.join(process.cwd(), 'public', 'uploads');
-      if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
       const d = new Date(); const pad = (n) => n.toString().padStart(2, '0');
       const dateStr = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
       const filename = `${dateStr}_${data.type}${path.extname(file.originalname)}`;
-      fs.writeFileSync(path.join(uploadPath, filename), file.buffer);
-      data.proof_image = `/uploads/${filename}`;
+      
+      const { data: uploadData, error } = await this.supabase.storage.from('uploads').upload(filename, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true
+      });
+      if (error) throw new BadRequestException('Lỗi tải minh chứng lên đám mây!');
+      const publicUrl = this.supabase.storage.from('uploads').getPublicUrl(filename).data.publicUrl;
+      data.proof_image = publicUrl;
     }
     return this.fundRepo.save(this.fundRepo.create(data));
   }
