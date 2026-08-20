@@ -18,7 +18,8 @@ export class FcdbbService implements OnModuleInit {
     @InjectRepository(Fund) private fundRepo: Repository<Fund>,
     private jwtService: JwtService,
   ) {
-    this.supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+    // Thêm dấu ! để báo cho TypeScript biết chắc chắn biến này tồn tại
+    this.supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!);
   }
 
   async onModuleInit() {
@@ -60,7 +61,6 @@ export class FcdbbService implements OnModuleInit {
     return { message: 'Đổi mật khẩu thành công' };
   }
 
-  // UPLOAD LÊN SUPABASE STORAGE
   async uploadAvatar(id: number, file: Express.Multer.File) {
     const user = await this.getProfileById(id);
     if (!user) throw new BadRequestException('User not found');
@@ -71,7 +71,7 @@ export class FcdbbService implements OnModuleInit {
 
     const { data, error } = await this.supabase.storage.from('uploads').upload(filename, file.buffer, {
       contentType: file.mimetype,
-      upsert: true // Bật cái này lên thì ảnh mới sẽ TỰ ĐỘNG ĐÈ ảnh cũ, không bị sinh file rác
+      upsert: true
     });
 
     if (error) throw new BadRequestException('Lỗi tải ảnh lên đám mây!');
@@ -133,10 +133,12 @@ export class FcdbbService implements OnModuleInit {
   
   async deleteFund(id: number) { 
     const fund = await this.fundRepo.findOne({ where: { id } });
-    // Nếu có ảnh minh chứng, gọi API Supabase xóa ảnh trên mây
     if (fund && fund.proof_image && fund.proof_image.includes('supabase.co')) {
       const fileName = fund.proof_image.split('/').pop();
-      await this.supabase.storage.from('uploads').remove([fileName.split('?')[0]]);
+      // Bọc thêm if(fileName) để chiều lòng TypeScript
+      if (fileName) {
+        await this.supabase.storage.from('uploads').remove([fileName.split('?')[0]]);
+      }
     }
     return this.fundRepo.delete(id); 
   }
@@ -145,7 +147,7 @@ export class FcdbbService implements OnModuleInit {
 
   async createFund(data: Partial<Fund>, file?: Express.Multer.File) {
     if (file) {
-      const d = new Date(); const pad = (n) => n.toString().padStart(2, '0');
+      const d = new Date(); const pad = (n: number) => n.toString().padStart(2, '0');
       const dateStr = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
       const filename = `${dateStr}_${data.type}${path.extname(file.originalname)}`;
       
