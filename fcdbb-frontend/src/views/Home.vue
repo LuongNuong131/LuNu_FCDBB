@@ -1,87 +1,28 @@
 <template>
-  <div class="w-full max-w-5xl space-y-8 mx-auto">
-    <div class="glass-panel relative overflow-hidden" v-if="activeMatch">
-      <!-- Decorator glow -->
-      <div class="absolute top-0 right-0 w-64 h-64 bg-red-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      
+  <div class="mx-auto w-full max-w-6xl space-y-8">
+    <section class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+      <div><p class="eyebrow mb-3">MATCH CENTER · LIVE OPERATIONS</p><h1 class="page-heading">Tổng quan <strong>đội bóng.</strong></h1><p class="page-intro mt-3">Theo dõi lịch đấu, điểm danh và nhịp vận hành của FC Đá Bay Bóng trong một màn hình.</p></div>
+      <div class="hidden rounded-2xl border border-emerald-300/15 bg-emerald-400/[.06] px-4 py-3 sm:block"><p class="text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-300">Trạng thái hệ thống</p><p class="mt-1 flex items-center gap-2 text-sm font-bold text-emerald-100"><span class="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_#4ade80]"></span>Đang hoạt động</p></div>
+    </section>
+
+    <section v-if="activeMatch" class="glass-panel relative overflow-hidden">
+      <div class="absolute -right-28 -top-32 h-80 w-80 rounded-full bg-rose-400/10 blur-3xl"></div>
       <div class="relative z-10">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="live-dot"></span>
-          <span class="scoreboard-tag">Đang diễn ra</span>
+        <div class="flex flex-wrap items-center justify-between gap-3"><div class="flex items-center gap-2"><span class="live-dot"></span><span class="scoreboard-tag">Đang diễn ra</span></div><span class="text-[10px] font-extrabold uppercase tracking-[.18em] text-slate-500">Live match / 01</span></div>
+        <div class="mt-6 grid gap-7 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div><p class="eyebrow mb-2 text-amber-300">TRẬN ĐẤU HIỆN TẠI</p><h2 class="font-display text-3xl font-extrabold leading-tight tracking-[-.04em] text-white sm:text-5xl">{{ activeMatch.title }}</h2><div class="mt-5 grid gap-3 text-sm text-slate-300 sm:grid-cols-2"><p class="flex items-center gap-2"><span class="text-amber-300">⌖</span><a :href="activeMatch.map_link" target="_blank" class="font-bold text-amber-200 hover:underline">{{ activeMatch.location_name }}</a></p><p class="flex items-center gap-2"><span class="text-sky-300">◷</span><span>{{ new Date(activeMatch.start_time).toLocaleString('vi-VN') }}</span></p></div></div>
+          <div class="rounded-2xl border border-rose-300/15 bg-rose-400/[.06] p-4 lg:min-w-[230px]"><p class="text-[10px] font-extrabold uppercase tracking-[.16em] text-rose-300">Khóa điểm danh</p><p class="mt-2 font-mono text-sm font-bold text-white">{{ new Date(activeMatch.lock_time).toLocaleString('vi-VN') }}</p><p class="mt-1 text-xs text-slate-400">Hãy có mặt đúng giờ.</p></div>
         </div>
-        <h2 class="text-3xl md:text-4xl font-black text-gold mb-4 tracking-tight uppercase">{{ activeMatch.title }}</h2>
-        
-        <div class="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm text-gray-200 mb-6 bg-white/5 p-4 rounded-xl border border-white/10">
-          <p class="flex items-center gap-2">📍 Sân: <a :href="activeMatch.map_link" target="_blank" class="text-gold font-bold hover:underline decoration-dotted underline-offset-4">{{ activeMatch.location_name }}</a></p>
-          <p class="flex items-center gap-2">⏰ Bắt đầu: <span class="font-mono bg-blue-900/50 px-2 py-0.5 rounded">{{ new Date(activeMatch.start_time).toLocaleString('vi-VN') }}</span></p>
-          <p class="sm:col-span-2 text-red-300 font-semibold flex items-center gap-2">⏳ Khóa đúng giờ: <span class="font-mono bg-red-900/50 px-2 py-0.5 rounded">{{ new Date(activeMatch.lock_time).toLocaleString('vi-VN') }}</span></p>
-        </div>
-        
-        <button @click="checkin" class="glass-btn btn-gold mt-2 sm:w-auto sm:px-10 text-lg uppercase tracking-wider" :disabled="loading || hasCheckedIn">{{ loading ? 'Đang quét GPS...' : (hasCheckedIn ? '✅ Đã điểm danh' : '📍 ĐIỂM DANH GPS') }}</button>
-
-        <div class="mt-8 pt-6 border-t border-white/10" v-if="activeDetails.attendances?.length">
-          <h3 class="font-bold uppercase tracking-widest text-sm text-blue-300 mb-4">Anh em đã có mặt ({{ activeDetails.attendances.length }})</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <div v-for="a in activeDetails.attendances" :key="a.id" class="bg-white/5 border border-white/10 p-3 rounded-xl flex items-center gap-3 hover:bg-white/10 transition">
-              <img :src="a.user.avatar" class="w-12 h-12 rounded-full object-cover border-2 border-blue-400/50 shadow-md">
-              <div class="text-sm">
-                <p class="font-bold text-white truncate">{{ a.user.name }}</p>
-                <p class="font-mono text-xs mt-0.5" :class="a.status === 'Đúng giờ' ? 'text-green-400' : 'text-yellow-400'">{{ a.status }} <span v-if="a.delay_seconds > 0" class="text-red-300">{{ formatDelay(a.delay_seconds) }}</span></p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <button @click="checkin" class="glass-btn btn-gold mt-7 sm:w-auto sm:px-10" :disabled="loading || hasCheckedIn">{{ loading ? 'Đang quét GPS...' : (hasCheckedIn ? '✓ Đã điểm danh' : '⌖ Điểm danh GPS') }}</button>
+        <div class="mt-8 border-t border-white/[.08] pt-6" v-if="activeDetails.attendances?.length"><div class="mb-4 flex items-center justify-between"><h3 class="text-[11px] font-extrabold uppercase tracking-[.18em] text-sky-300">Đội hình đã có mặt</h3><span class="rounded-full bg-white/[.06] px-3 py-1 text-xs font-bold text-white">{{ activeDetails.attendances.length }} người</span></div><div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"><div v-for="a in activeDetails.attendances" :key="a.id" class="flex items-center gap-3 rounded-xl border border-white/[.08] bg-white/[.04] p-3 transition hover:bg-white/[.08]"><img :src="a.user.avatar" class="h-11 w-11 rounded-xl border border-sky-300/30 object-cover"><div class="min-w-0"><p class="truncate text-sm font-bold text-white">{{ a.user.name }}</p><p class="mt-1 font-mono text-[10px]" :class="a.status === 'Đúng giờ' ? 'text-emerald-300' : 'text-amber-300'">{{ a.status }} <span v-if="a.delay_seconds > 0" class="text-rose-300">{{ formatDelay(a.delay_seconds) }}</span></p></div></div></div></div>
       </div>
-    </div>
+    </section>
+    <section v-else class="glass-panel flex min-h-[260px] flex-col items-center justify-center text-center"><div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-sky-300/20 bg-sky-300/[.08] text-2xl">◷</div><h2 class="font-display text-2xl font-extrabold text-white">Chưa có trận đang mở.</h2><p class="mt-2 max-w-md text-sm leading-6 text-slate-400">Khi admin tạo trận tiếp theo, thông tin điểm danh sẽ xuất hiện tại đây.</p></section>
 
-    <div v-if="historyMatches.length" class="mt-10">
-      <h2 class="text-2xl font-black text-white mb-6 uppercase tracking-wider flex items-center gap-3">
-        <span class="text-gold text-3xl">🎟️</span> Lịch sử 3 trận gần nhất
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div v-for="m in historyMatches" :key="m.id" @click="openModal(m)" class="ticket-stub cursor-pointer">
-          <h3 class="font-bold text-xl text-white mb-1 truncate">{{ m.title }}</h3>
-          <p class="text-sm text-blue-200 font-mono mb-4">{{ new Date(m.start_time).toLocaleDateString('vi-VN') }}</p>
-          <div class="flex items-center text-xs font-bold text-gold uppercase tracking-widest mt-2 border-t border-white/10 pt-3">
-            Xem chi tiết <span class="ml-2">→</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <section v-if="historyMatches.length" class="pt-1"><div class="mb-5 flex items-end justify-between"><div><p class="eyebrow mb-2">ARCHIVE</p><h2 class="font-display text-2xl font-extrabold tracking-[-.03em] text-white">Lịch sử gần đây</h2></div><span class="text-xs text-slate-500">03 trận gần nhất</span></div><div class="grid grid-cols-1 gap-4 md:grid-cols-3"><div v-for="m in historyMatches" :key="m.id" @click="openModal(m)" class="ticket-stub cursor-pointer"><div class="relative z-10"><div class="mb-5 flex items-center justify-between"><span class="rounded-full border border-white/10 bg-white/[.05] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[.14em] text-slate-400">Đã kết thúc</span><span class="text-lg text-amber-300">↗</span></div><h3 class="truncate font-display text-xl font-extrabold text-white">{{ m.title }}</h3><p class="mt-2 font-mono text-xs text-sky-200">{{ new Date(m.start_time).toLocaleDateString('vi-VN') }}</p><div class="mt-6 border-t border-white/10 pt-3 text-[10px] font-extrabold uppercase tracking-[.16em] text-amber-300">Xem báo cáo trận <span class="ml-1">→</span></div></div></div></div></section>
 
-    <div v-if="showModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div class="glass-panel max-w-4xl w-full max-h-[85vh] overflow-y-auto relative animate-slide-in">
-        <button @click="showModal = false" class="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/20 font-bold text-red-400 hover:bg-red-500 hover:text-white transition-all text-xl z-10">&times;</button>
-        <h2 class="text-3xl font-black mb-8 text-center text-gold border-b border-white/10 pb-4">{{ selectedMatch?.title }}</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div>
-            <h3 class="text-xl font-black uppercase tracking-wider text-green-400 mb-5 flex items-center gap-2">
-              <span class="w-2 h-6 bg-green-500 rounded"></span> Đã tham gia ({{ modalData.attendances?.length || 0 }})
-            </h3>
-            <div class="space-y-3">
-              <div v-for="a in modalData.attendances" :key="a.id" class="flex justify-between items-center bg-green-500/10 border border-green-500/20 p-3 rounded-xl">
-                <div class="flex items-center gap-3">
-                  <img :src="a.user.avatar" class="w-10 h-10 rounded-full object-cover border border-green-400/50">
-                  <span class="font-bold text-white">{{ a.user.name }}</span>
-                </div>
-                <span class="text-xs font-mono font-bold px-2 py-1 rounded bg-black/30" :class="a.status === 'Đúng giờ' ? 'text-green-400' : 'text-yellow-400'">{{ a.status }} <span v-if="a.delay_seconds > 0" class="text-red-300 ml-1">{{ formatDelay(a.delay_seconds) }}</span></span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h3 class="text-xl font-black uppercase tracking-wider text-red-400 mb-5 flex items-center gap-2">
-              <span class="w-2 h-6 bg-red-500 rounded"></span> Vắng mặt ({{ modalData.absentUsers?.length || 0 }})
-            </h3>
-            <div class="space-y-3">
-              <div v-for="u in modalData.absentUsers" :key="u.id" class="flex items-center gap-3 bg-red-500/10 border border-red-500/20 p-3 rounded-xl">
-                <img :src="u.avatar" class="w-10 h-10 rounded-full object-cover grayscale opacity-60 border border-red-400/30">
-                <span class="font-bold text-gray-400 line-through decoration-red-500/50">{{ u.name }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#030a13]/85 p-4 backdrop-blur-md">
+      <div class="glass-panel relative max-h-[88vh] w-full max-w-4xl overflow-y-auto animate-slide-in"><button @click="showModal = false" class="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[.06] text-xl text-slate-300 transition hover:bg-rose-400/20 hover:text-rose-200">&times;</button><div class="border-b border-white/10 pb-5 pr-12"><p class="eyebrow mb-2">MATCH REPORT</p><h2 class="font-display text-2xl font-extrabold text-white sm:text-3xl">{{ selectedMatch?.title }}</h2></div><div class="mt-7 grid grid-cols-1 gap-8 md:grid-cols-2"><div><h3 class="mb-4 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-emerald-300"><span class="h-2 w-2 rounded-full bg-emerald-400"></span>Đã tham gia ({{ modalData.attendances?.length || 0 }})</h3><div class="space-y-2"><div v-for="a in modalData.attendances" :key="a.id" class="flex items-center justify-between gap-3 rounded-xl border border-emerald-300/10 bg-emerald-400/[.05] p-3"><div class="flex min-w-0 items-center gap-3"><img :src="a.user.avatar" class="h-9 w-9 rounded-lg object-cover"><span class="truncate text-sm font-bold text-white">{{ a.user.name }}</span></div><span class="shrink-0 text-[10px] font-bold" :class="a.status === 'Đúng giờ' ? 'text-emerald-300' : 'text-amber-300'">{{ a.status }}</span></div></div></div><div><h3 class="mb-4 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-rose-300"><span class="h-2 w-2 rounded-full bg-rose-400"></span>Vắng mặt ({{ modalData.absentUsers?.length || 0 }})</h3><div class="space-y-2"><div v-for="u in modalData.absentUsers" :key="u.id" class="flex items-center gap-3 rounded-xl border border-rose-300/10 bg-rose-400/[.04] p-3"><img :src="u.avatar" class="h-9 w-9 rounded-lg object-cover grayscale opacity-60"><span class="truncate text-sm font-bold text-slate-400">{{ u.name }}</span></div></div></div></div></div>
     </div>
   </div>
 </template>

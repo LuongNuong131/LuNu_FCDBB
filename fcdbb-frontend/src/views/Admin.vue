@@ -1,20 +1,20 @@
 <template>
-  <div class="w-full max-w-6xl space-y-6 mx-auto">
+  <div class="mx-auto w-full max-w-7xl space-y-7">
     <!-- Header Tabs -->
-    <div class="flex gap-4 mb-8 border-b border-white/10 pb-4">
-      <button @click="tab = 'matches'" :class="tab === 'matches' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] border-blue-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'" class="px-6 py-2.5 rounded-full font-bold transition-all duration-300 border border-transparent flex items-center gap-2">
+    <div class="flex flex-wrap gap-2 border-b border-white/[.08] pb-4">
+      <button @click="tab = 'matches'" :class="tab === 'matches' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] border-blue-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'" class="rounded-xl border px-4 py-3 text-[10px] font-extrabold uppercase tracking-[.12em] transition-all duration-300 flex items-center gap-2">
         <span class="text-xl">⚽</span> Quản lý Trận Đấu
       </button>
-      <button @click="tab = 'users'" :class="tab === 'users' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] border-blue-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'" class="px-6 py-2.5 rounded-full font-bold transition-all duration-300 border border-transparent flex items-center gap-2">
+      <button @click="tab = 'users'" :class="tab === 'users' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] border-blue-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'" class="rounded-xl border px-4 py-3 text-[10px] font-extrabold uppercase tracking-[.12em] transition-all duration-300 flex items-center gap-2">
         <span class="text-xl">👥</span> Tổng Kho Cầu Thủ
       </button>
     </div>
 
     <!-- Match Tab -->
-    <div v-if="tab === 'matches'" class="grid lg:grid-cols-5 gap-6">
+    <div v-if="tab === 'matches'" class="grid gap-6 lg:grid-cols-5">
       <div class="lg:col-span-2 space-y-6">
         <div class="glass-panel">
-          <h2 class="text-xl font-black text-gold uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-white/10 pb-3">
+          <h2 class="mb-6 flex items-center gap-3 border-b border-white/[.08] pb-4 font-display text-xl font-extrabold uppercase tracking-[.08em] text-amber-300">
             {{ isEditing ? '✏️ Sửa Trận Bóng' : '✨ Tạo Trận Mới' }}
           </h2>
           
@@ -56,7 +56,7 @@
 
       <div class="lg:col-span-3">
         <div class="glass-panel h-full">
-          <h2 class="text-xl font-black text-blue-200 uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-white/10 pb-3">
+          <h2 class="mb-6 flex items-center gap-3 border-b border-white/[.08] pb-4 font-display text-xl font-extrabold uppercase tracking-[.08em] text-sky-200">
             📋 Toàn bộ Trận Đấu
           </h2>
           <div class="space-y-3 max-h-[700px] overflow-y-auto pr-2">
@@ -81,10 +81,10 @@
     <!-- Users Tab -->
     <div v-if="tab === 'users'" class="space-y-6">
       <div class="glass-panel">
-        <h2 class="text-xl font-black text-gold uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-white/10 pb-3">
+        <h2 class="mb-6 flex items-center gap-3 border-b border-white/[.08] pb-4 font-display text-xl font-extrabold uppercase tracking-[.08em] text-amber-300">
           ✨ Cấp Tài Khoản Cầu Thủ
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-4 md:items-end">
           <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Username</label><input v-model="newUser.username" placeholder="vd: luong123" class="glass-input"></div>
           <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Mật khẩu</label><input v-model="newUser.password" placeholder="••••••••" class="glass-input"></div>
           <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Họ & Tên</label><input v-model="newUser.name" placeholder="Tên hiển thị" class="glass-input"></div>
@@ -92,7 +92,7 @@
         </div>
       </div>
 
-      <div class="glass-panel overflow-x-auto p-0 rounded-2xl border border-white/20">
+      <div class="table-shell overflow-x-auto p-0 rounded-2xl">
         <table class="w-full text-left text-sm whitespace-nowrap">
           <thead class="bg-black/40">
             <tr>

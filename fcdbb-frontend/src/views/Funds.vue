@@ -1,90 +1,9 @@
 <template>
-  <div class="w-full max-w-5xl mx-auto space-y-6">
-    <div class="glass-panel flex flex-col md:flex-row justify-between items-center gap-4">
-      <div class="flex items-center gap-3">
-        <span class="text-4xl">💰</span>
-        <h2 class="text-2xl md:text-3xl font-black text-white uppercase tracking-wider">Quản Lý Quỹ Đội</h2>
-      </div>
-      <div class="bg-black/30 px-6 py-3 rounded-xl border border-white/10 shadow-inner">
-        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Số dư hiện tại</h3>
-        <p class="text-3xl font-black font-mono" :class="balance >= 0 ? 'text-green-400' : 'text-red-400'">{{ balance.toLocaleString() }} <span class="text-lg">VNĐ</span></p>
-      </div>
-    </div>
-    
-    <div v-if="isAdmin" class="glass-panel relative overflow-hidden">
-      <div class="absolute inset-0 bg-blue-500/5 pointer-events-none"></div>
-      <h3 class="text-sm font-bold uppercase tracking-wider text-gold mb-4 relative z-10 border-b border-white/10 pb-2">➕ Thêm Giao Dịch Mới</h3>
-      <div class="flex flex-wrap md:flex-nowrap gap-4 items-center relative z-10">
-        <div class="w-full md:w-32">
-          <select v-model="form.type" class="glass-input font-bold" :class="form.type === 'THU' ? 'text-green-400' : 'text-red-400'">
-            <option value="THU">📈 THU</option>
-            <option value="CHI">📉 CHI</option>
-          </select>
-        </div>
-        <input v-model="form.amount" type="number" placeholder="Số tiền (VNĐ)" class="glass-input w-full md:w-48 font-mono">
-        <input v-model="form.reason" type="text" placeholder="Lý do thu/chi..." class="glass-input flex-1">
-        <div class="w-full md:w-auto relative">
-          <input type="file" @change="e => form.file = e.target.files[0]" id="fund-file" class="hidden">
-          <label for="fund-file" class="cursor-pointer flex items-center justify-center gap-2 bg-white/5 border border-white/20 text-blue-200 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors h-full w-full whitespace-nowrap">
-            <span>{{ form.file ? '📎 Đã chọn ảnh' : '📸 Đính kèm ảnh' }}</span>
-          </label>
-        </div>
-        <button @click="addFund" class="glass-btn !w-full md:!w-32 whitespace-nowrap">Lưu GD</button>
-      </div>
-    </div>
-
-    <div class="glass-panel overflow-x-auto p-0 rounded-2xl border border-white/20">
-      <table class="w-full text-left text-sm whitespace-nowrap">
-        <thead class="bg-black/40">
-          <tr>
-            <th class="p-4 font-bold text-blue-300 uppercase tracking-wider">Thời gian</th>
-            <th class="p-4 font-bold text-blue-300 uppercase tracking-wider">Phân Loại</th>
-            <th class="p-4 font-bold text-blue-300 uppercase tracking-wider">Số tiền</th>
-            <th class="p-4 font-bold text-blue-300 uppercase tracking-wider">Nội dung</th>
-            <th class="p-4 font-bold text-blue-300 uppercase tracking-wider text-center">Minh chứng</th>
-            <th v-if="isAdmin" class="p-4 font-bold text-blue-300 uppercase tracking-wider text-right">Tác vụ</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="f in funds" :key="f.id" class="border-t border-white/5 hover:bg-white/5 transition-colors">
-            <td class="p-4 font-mono text-gray-300">
-              {{ new Date(f.created_at).toLocaleDateString('vi-VN') }}
-              <span class="text-xs text-gray-500 ml-1">{{ new Date(f.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) }}</span>
-            </td>
-            <td class="p-4">
-              <span class="px-2 py-1 rounded text-xs font-black tracking-widest" :class="f.type === 'THU' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'">{{ f.type }}</span>
-            </td>
-            <td class="p-4 font-mono font-bold" :class="f.type === 'THU' ? 'text-green-400' : 'text-red-400'">
-              {{ f.type === 'THU' ? '+' : '-' }}{{ f.amount.toLocaleString() }}đ
-            </td>
-            <td class="p-4 max-w-[250px] truncate text-white" :title="f.reason">{{ f.reason }}</td>
-            <td class="p-4 text-center">
-              <button v-if="f.proof_image" @click="viewImage(f.proof_image)" class="text-blue-300 bg-blue-500/10 border border-blue-400/20 px-3 py-1.5 rounded hover:bg-blue-500/20 hover:text-white transition-colors text-xs font-bold flex items-center justify-center gap-1 mx-auto">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                Xem
-              </button>
-              <span v-else class="text-gray-600 text-xs italic">-</span>
-            </td>
-            <td v-if="isAdmin" class="p-4 text-right">
-              <button @click="deleteFund(f.id)" class="text-red-400 bg-red-500/10 border border-red-400/20 px-3 py-1.5 rounded hover:bg-red-500/20 hover:text-white transition-colors text-xs font-bold">Xóa</button>
-            </td>
-          </tr>
-          <tr v-if="funds.length === 0">
-            <td :colspan="isAdmin ? 6 : 5" class="p-8 text-center text-gray-400 italic">Chưa có giao dịch nào được ghi nhận.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Image Modal -->
-    <transition name="page">
-      <div v-if="modalImg" class="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click="modalImg = null">
-        <div class="relative max-w-4xl w-full flex flex-col items-center">
-          <button class="absolute -top-12 right-0 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 border border-white/20 font-bold text-white hover:bg-red-500 hover:border-red-400 transition-all text-xl" title="Đóng">&times;</button>
-          <img :src="modalImg" class="max-w-full max-h-[85vh] object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-white/10" @click.stop>
-        </div>
-      </div>
-    </transition>
+  <div class="mx-auto w-full max-w-6xl space-y-8">
+    <section class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p class="eyebrow mb-3">TEAM FINANCE · TRANSPARENCY</p><h1 class="page-heading">Quỹ <strong>đội bóng.</strong></h1><p class="page-intro mt-3">Mọi khoản thu chi đều được ghi nhận rõ ràng để tập thể luôn chủ động và minh bạch.</p></div><div class="rounded-2xl border border-emerald-300/15 bg-emerald-400/[.06] p-4 sm:min-w-[230px]"><p class="stat-label text-emerald-300">Số dư hiện tại</p><p class="mt-2 font-display text-2xl font-extrabold" :class="balance >= 0 ? 'text-emerald-300' : 'text-rose-300'">{{ balance.toLocaleString() }}<span class="ml-1 text-sm font-semibold text-slate-400">VNĐ</span></p></div></section>
+    <section v-if="isAdmin" class="glass-panel"><div class="mb-5 flex items-center gap-3 border-b border-white/[.08] pb-4"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-300/10 text-lg text-amber-300">＋</span><div><p class="eyebrow text-amber-300">ADMIN TOOL</p><h2 class="font-display text-lg font-extrabold text-white">Thêm giao dịch mới</h2></div></div><div class="grid gap-3 md:grid-cols-[140px_180px_1fr_auto] md:items-center"><select v-model="form.type" class="glass-input font-bold" :class="form.type === 'THU' ? 'text-emerald-300' : 'text-rose-300'"><option value="THU">＋ THU</option><option value="CHI">− CHI</option></select><input v-model="form.amount" type="number" placeholder="Số tiền (VNĐ)" class="glass-input font-mono"><input v-model="form.reason" type="text" placeholder="Lý do thu / chi..." class="glass-input"><div class="flex gap-2"><input type="file" @change="e => form.file = e.target.files[0]" id="fund-file" class="hidden"><label for="fund-file" class="flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[.04] px-4 text-center text-xs font-bold text-sky-200 transition hover:bg-white/[.08] md:flex-none">{{ form.file ? 'Đã chọn ảnh' : 'Đính kèm ảnh' }}</label><button @click="addFund" class="glass-btn !w-auto whitespace-nowrap px-5">Lưu</button></div></div></section>
+    <section class="space-y-4"><div class="flex items-center justify-between"><div><p class="eyebrow mb-2">LEDGER</p><h2 class="font-display text-2xl font-extrabold text-white">Lịch sử giao dịch</h2></div><span class="rounded-full border border-white/10 bg-white/[.04] px-3 py-1.5 text-xs font-bold text-slate-400">{{ funds.length }} bản ghi</span></div><div class="table-shell"><table class="w-full min-w-[720px] text-left text-sm"><thead><tr><th>Thời gian</th><th>Phân loại</th><th>Số tiền</th><th>Nội dung</th><th class="text-center">Minh chứng</th><th v-if="isAdmin" class="text-right">Tác vụ</th></tr></thead><tbody><tr v-for="f in funds" :key="f.id"><td class="font-mono text-xs text-slate-300">{{ new Date(f.created_at).toLocaleDateString('vi-VN') }} <span class="text-slate-500">{{ new Date(f.created_at).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) }}</span></td><td><span class="rounded-full border px-2.5 py-1 text-[10px] font-extrabold tracking-[.14em]" :class="f.type === 'THU' ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-300' : 'border-rose-300/20 bg-rose-400/10 text-rose-300'">{{ f.type }}</span></td><td class="font-mono font-bold" :class="f.type === 'THU' ? 'text-emerald-300' : 'text-rose-300'">{{ f.type === 'THU' ? '+' : '-' }}{{ f.amount.toLocaleString() }}đ</td><td class="max-w-[280px] truncate font-medium text-white" :title="f.reason">{{ f.reason }}</td><td class="text-center"><button v-if="f.proof_image" @click="viewImage(f.proof_image)" class="rounded-lg border border-sky-300/20 bg-sky-300/[.08] px-3 py-1.5 text-xs font-bold text-sky-200 transition hover:bg-sky-300/20">Xem ảnh</button><span v-else class="text-xs italic text-slate-600">—</span></td><td v-if="isAdmin" class="text-right"><button @click="deleteFund(f.id)" class="rounded-lg border border-rose-300/20 bg-rose-400/[.08] px-3 py-1.5 text-xs font-bold text-rose-300 transition hover:bg-rose-400/20">Xóa</button></td></tr><tr v-if="funds.length === 0"><td :colspan="isAdmin ? 6 : 5" class="p-12 text-center text-sm text-slate-500">Chưa có giao dịch nào được ghi nhận.</td></tr></tbody></table></div></section>
+    <transition name="page"><div v-if="modalImg" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md" @click="modalImg = null"><div class="relative flex w-full max-w-4xl justify-center"><button class="absolute -right-2 -top-12 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-xl text-white hover:bg-rose-400/30" title="Đóng">&times;</button><img :src="modalImg" class="max-h-[85vh] max-w-full rounded-2xl border border-white/10 object-contain shadow-2xl" @click.stop></div></div></transition>
   </div>
 </template>
 

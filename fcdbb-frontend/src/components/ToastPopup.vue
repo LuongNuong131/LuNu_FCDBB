@@ -1,14 +1,14 @@
 <template>
-  <div class="fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none">
+  <div class="pointer-events-none fixed right-4 top-4 z-50 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3 sm:right-6 sm:top-6">
     <transition-group name="toast">
       <div 
         v-for="toast in toasts" 
         :key="toast.id"
-        class="min-w-[250px] p-4 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] backdrop-blur-md flex items-center gap-3 text-white animate-slide-in pointer-events-auto border"
+        class="pointer-events-auto flex w-full items-center gap-3 rounded-2xl border p-4 text-white shadow-2xl backdrop-blur-xl animate-slide-in"
         :class="{
-          'bg-blue-600/90 border-blue-400': toast.type === 'success',
-          'bg-red-600/90 border-red-400': toast.type === 'error',
-          'bg-yellow-500/90 border-yellow-300 text-gray-900': toast.type === 'warning'
+          'bg-sky-700/90 border-sky-300/30': toast.type === 'success',
+          'bg-rose-700/90 border-rose-300/30': toast.type === 'error',
+          'bg-amber-300/95 border-amber-100/50 text-slate-950': toast.type === 'warning'
         }"
       >
         <span class="font-bold flex-1">{{ toast.message }}</span>
