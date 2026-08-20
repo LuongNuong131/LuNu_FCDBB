@@ -142,6 +142,9 @@ export class FcdbbService implements OnModuleInit {
   async createMatch(data: Partial<Match>) {
     const normalized = this.normalizeMatchTimes(data);
     this.validateMatchTimes(normalized);
+    if (new Date(normalized.end_time as Date).getTime() <= Date.now()) {
+      throw new BadRequestException('Chốt sổ phải là một thời điểm trong tương lai.');
+    }
     return this.matchRepo.save(this.matchRepo.create(normalized));
   }
 
@@ -164,19 +167,32 @@ export class FcdbbService implements OnModuleInit {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
 
+  private formatVietnamDateTime(value: Date) {
+    return new Intl.DateTimeFormat('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).format(value);
+  }
+
   async checkin(userId: number, matchId: number, lat: number, lng: number) {
     const exist = await this.attendanceRepo.findOne({ where: { user: { id: userId }, match: { id: matchId } } });
     if (exist) throw new BadRequestException('Bạn đã điểm danh rồi!');
     const match = await this.matchRepo.findOne({ where: { id: matchId } });
     if (!match) throw new BadRequestException('Trận đấu không tồn tại!');
     const now = new Date();
-    if (now > new Date(match.end_time)) throw new BadRequestException('Trận đấu đã kết thúc!');
+    const lockTime = new Date(match.lock_time);
+    const endTime = new Date(match.end_time);
+    const earliestCheckin = new Date(lockTime.getTime() - 15 * 60 * 1000);
+    if (now < earliestCheckin) {
+      throw new BadRequestException(`Chưa đến giờ điểm danh. Bạn có thể điểm danh từ ${this.formatVietnamDateTime(earliestCheckin)}.`);
+    }
+    if (now > endTime) throw new BadRequestException('Trận đấu đã kết thúc, không thể điểm danh.');
 
     const dist = this.calcDist(lat, lng, match.lat, match.lng);
     if (dist > 50) throw new BadRequestException(`Bạn cách sân ${Math.round(dist)}m (Yêu cầu <= 50m)!`);
 
     let status = 'Đúng giờ'; let delaySeconds = 0;
-    const lockTime = new Date(match.lock_time);
     if (now > lockTime) {
       status = 'Đi muộn';
       delaySeconds = Math.floor((now.getTime() - lockTime.getTime()) / 1000);

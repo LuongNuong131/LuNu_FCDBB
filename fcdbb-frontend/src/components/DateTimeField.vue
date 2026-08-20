@@ -6,7 +6,7 @@
     </div>
     <div class="grid grid-cols-[1.15fr_.85fr] gap-2">
       <input :id="`${id}-date`" :value="dateValue" type="date" class="glass-input !px-3 !py-2.5 font-mono text-xs" @input="updateDate($event.target.value)">
-      <input :id="`${id}-time`" :value="timeValue" type="time" step="1" class="glass-input !px-3 !py-2.5 font-mono text-xs" @input="updateTime($event.target.value)">
+      <input :id="`${id}-time`" :value="timeValue" type="text" inputmode="numeric" maxlength="8" pattern="^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$" placeholder="HH:mm:ss" class="glass-input !px-3 !py-2.5 font-mono text-xs tracking-wider" @change="updateTime($event.target.value)">
     </div>
     <p class="mt-2 text-[10px] text-slate-500">{{ displayValue || 'Chưa chọn thời gian' }}</p>
   </div>

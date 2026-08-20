@@ -11,7 +11,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3"><div class="flex items-center gap-2"><span class="live-dot"></span><span class="scoreboard-tag">Đang diễn ra</span></div><span class="text-[10px] font-extrabold uppercase tracking-[.18em] text-slate-500">Live match / 01</span></div>
         <div class="mt-6 grid gap-7 lg:grid-cols-[1fr_auto] lg:items-end">
           <div><p class="eyebrow mb-2 text-amber-300">TRẬN ĐẤU HIỆN TẠI</p><h2 class="font-display text-3xl font-extrabold leading-tight tracking-[-.04em] text-white sm:text-5xl">{{ activeMatch.title }}</h2><div class="mt-5 grid gap-3 text-sm text-slate-300 sm:grid-cols-2"><p class="flex items-center gap-2"><span class="text-amber-300">⌖</span><a :href="activeMatch.map_link" target="_blank" class="font-bold text-amber-200 hover:underline">{{ activeMatch.location_name }}</a></p><p class="flex items-center gap-2"><span class="text-sky-300">◷</span><span>{{ formatVietnamDateTime(activeMatch.start_time) }}</span></p></div></div>
-          <div class="rounded-2xl border border-rose-300/15 bg-rose-400/[.06] p-4 lg:min-w-[230px]"><p class="text-[10px] font-extrabold uppercase tracking-[.16em] text-rose-300">Khóa điểm danh</p><p class="mt-2 font-mono text-sm font-bold text-white">{{ formatVietnamDateTime(activeMatch.lock_time) }}</p><p class="mt-1 text-xs text-slate-400">Hãy có mặt đúng giờ.</p></div>
+          <div class="rounded-2xl border border-rose-300/15 bg-rose-400/[.06] p-4 lg:min-w-[230px]"><p class="text-[10px] font-extrabold uppercase tracking-[.16em] text-rose-300">Khóa điểm danh</p><p class="mt-2 font-mono text-sm font-bold text-white">{{ formatVietnamDateTime(activeMatch.lock_time) }}</p><p class="mt-1 text-xs text-slate-400">Mở điểm danh từ {{ checkinOpensAt ? formatVietnamDateTime(checkinOpensAt) : '15 phút trước' }}.</p></div>
         </div>
         <button @click="checkin" class="glass-btn btn-gold mt-7 sm:w-auto sm:px-10" :disabled="loading || hasCheckedIn">{{ loading ? 'Đang quét GPS...' : (hasCheckedIn ? '✓ Đã điểm danh' : '⌖ Điểm danh GPS') }}</button>
         <div class="mt-8 border-t border-white/[.08] pt-6" v-if="activeDetails.attendances?.length"><div class="mb-4 flex items-center justify-between"><h3 class="text-[11px] font-extrabold uppercase tracking-[.18em] text-sky-300">Đội hình đã có mặt</h3><span class="rounded-full bg-white/[.06] px-3 py-1 text-xs font-bold text-white">{{ activeDetails.attendances.length }} người</span></div><div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"><div v-for="a in activeDetails.attendances" :key="a.id" class="flex items-center gap-3 rounded-xl border border-white/[.08] bg-white/[.04] p-3 transition hover:bg-white/[.08]"><img :src="a.user.avatar" class="h-11 w-11 rounded-xl border border-sky-300/30 object-cover"><div class="min-w-0"><p class="truncate text-sm font-bold text-white">{{ a.user.name }}</p><p class="mt-1 font-mono text-[10px]" :class="a.status === 'Đúng giờ' ? 'text-emerald-300' : 'text-amber-300'">{{ a.status }} <span v-if="a.delay_seconds > 0" class="text-rose-300">{{ formatDelay(a.delay_seconds) }}</span><span v-if="a.created_at" class="mt-1 block text-slate-500">{{ formatVietnamDateTime(a.created_at) }}</span></p></div></div></div></div>
@@ -31,7 +31,7 @@
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from '../composables/useToast';
-import { formatVietnamDateTime, formatVietnamDate } from '../utils/datetime';
+import { formatVietnamDateTime, formatVietnamDate, parseVietnamDate } from '../utils/datetime';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const { addToast } = useToast();
@@ -45,6 +45,10 @@ const selectedMatch = ref(null);
 const modalData = ref({});
 
 const hasCheckedIn = computed(() => activeDetails.value.attendances?.some(a => a.user.id === user.id));
+const checkinOpensAt = computed(() => {
+  const lock = parseVietnamDate(activeMatch.value?.lock_time);
+  return lock ? new Date(lock.getTime() - 15 * 60 * 1000) : null;
+});
 
 const formatDelay = (seconds) => {
   const total = Math.max(0, Number(seconds) || 0);

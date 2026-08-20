@@ -175,7 +175,10 @@ const saveMatch = async () => {
     if (isEditing.value) await axios.put(`${API}/matches/${match.value.id}`, match.value);
     else await axios.post(`${API}/matches`, match.value);
     addToast('Lưu trận thành công!', 'success'); resetMatchForm(); loadAdminData();
-  } catch(e) { addToast('Lỗi lưu trận!', 'error'); }
+  } catch(e) {
+    const message = e.response?.data?.message;
+    addToast(Array.isArray(message) ? message.join(', ') : (message || 'Lỗi lưu trận!'), 'error');
+  }
 };
 const editMatch = (m) => { match.value = { ...m, start_time: toVietnamInput(m.start_time), lock_time: toVietnamInput(m.lock_time), end_time: toVietnamInput(m.end_time) }; isEditing.value = true; };
 const stopMatch = async (id) => {
