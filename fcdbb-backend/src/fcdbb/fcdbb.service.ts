@@ -11,7 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcrypt';
 import * as path from 'path';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, unlink, writeFile } from 'fs/promises';
 import {
   User,
   Match,
@@ -348,11 +348,11 @@ export class FcdbbService implements OnModuleInit {
     authorization?: string,
   ) {
     const admin = this.getAdminFromToken(authorization);
+    if (!data.title?.trim())
+      throw new BadRequestException('Tiêu đề bài viết không được để trống.');
     const imageUrl = image
       ? await this.uploadImageToBucket(image, 'blog')
       : data.image_url;
-    if (!data.title?.trim())
-      throw new BadRequestException('Tiêu đề bài viết không được để trống.');
     return this.blogRepo.save(
       this.blogRepo.create({
         title: data.title.trim(),
@@ -382,41 +382,100 @@ export class FcdbbService implements OnModuleInit {
       content: data.content?.trim() ?? post.content,
       image_url: imageUrl || post.image_url,
     });
-    return this.blogRepo.findOne({ where: { id } });
+    const updatedPost = await this.blogRepo.findOne({ where: { id } });
+    if (image && post.image_url && post.image_url !== updatedPost?.image_url) {
+      await this.deleteStoredImage(post.image_url);
+    }
+    return updatedPost;
   }
 
   async deleteBlogPost(id: number, authorization?: string) {
     this.getAdminFromToken(authorization);
-    const result = await this.blogRepo.delete(id);
-    if (!result.affected)
-      throw new BadRequestException('Bài viết không tồn tại.');
+    const post = await this.blogRepo.findOne({ where: { id } });
+    if (!post) throw new BadRequestException('Bài viết không tồn tại.');
+    await this.blogRepo.delete(id);
+    await this.deleteStoredImage(post.image_url);
     return { message: 'Đã xóa bài viết.' };
   }
 
   async deleteFund(id: number) {
     const fund = await this.fundRepo.findOne({ where: { id } });
-    if (fund && fund.proof_image && fund.proof_image.includes('supabase.co')) {
-      const fileName = fund.proof_image.split('/').pop();
-      // Bọc thêm if(fileName) để chiều lòng TypeScript
-      if (fileName) {
-        if (this.supabase) {
-          await this.supabase.storage
-            .from('uploads')
-            .remove([fileName.split('?')[0]]);
-        }
-      }
-    }
-    return this.fundRepo.delete(id);
+    if (!fund) throw new BadRequestException('Giao dịch quỹ không tồn tại.');
+    const result = await this.fundRepo.delete(id);
+    await this.deleteStoredImage(fund.proof_image);
+    return result;
   }
 
   async updateFund(id: number, data: Partial<Fund>) {
     return this.fundRepo.update(id, data);
   }
 
+  private formatStorageTimestamp(value = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })
+      .formatToParts(value)
+      .reduce<Record<string, string>>((result, part) => {
+        if (part.type !== 'literal') result[part.type] = part.value;
+        return result;
+      }, {});
+    const milliseconds = value.getMilliseconds().toString().padStart(3, '0');
+    return `${parts.year}${parts.month}${parts.day}_${parts.hour}${parts.minute}${parts.second}_${milliseconds}`;
+  }
+
   private async uploadImageToBucket(file: Express.Multer.File, folder: string) {
     if (!file) return undefined;
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    return this.saveImage(file, `${folder}/${Date.now()}_${safeName}`);
+    const extension = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const fileName = `${this.formatStorageTimestamp()}${extension}`;
+    return this.saveImage(file, `${folder}/${fileName}`);
+  }
+
+  private getStoragePath(imageUrl?: string | null) {
+    if (!imageUrl) return undefined;
+    const cleanUrl = imageUrl.split('?')[0];
+    const supabaseMarker = '/storage/v1/object/public/uploads/';
+    if (cleanUrl.includes(supabaseMarker)) {
+      return decodeURIComponent(cleanUrl.split(supabaseMarker)[1]);
+    }
+    if (cleanUrl.startsWith('/uploads/')) {
+      return decodeURIComponent(cleanUrl.slice('/uploads/'.length));
+    }
+    return undefined;
+  }
+
+  private async deleteStoredImage(imageUrl?: string | null) {
+    const storagePath = this.getStoragePath(imageUrl);
+    if (!storagePath) return;
+    try {
+      if (
+        this.supabase &&
+        imageUrl?.includes('/storage/v1/object/public/uploads/')
+      ) {
+        const { error } = await this.supabase.storage
+          .from('uploads')
+          .remove([storagePath]);
+        if (error) console.warn(`Không thể xóa ảnh cloud: ${error.message}`);
+        return;
+      }
+      const localPath = path.join(
+        process.cwd(),
+        'public',
+        'uploads',
+        storagePath,
+      );
+      await unlink(localPath).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== 'ENOENT') throw error;
+      });
+    } catch (error) {
+      console.warn('Không thể dọn ảnh cũ:', error);
+    }
   }
 
   private async saveImage(
@@ -454,12 +513,11 @@ export class FcdbbService implements OnModuleInit {
 
   async createFund(data: Partial<Fund>, file?: Express.Multer.File) {
     if (file) {
-      const d = new Date();
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const dateStr = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
-      const filename = `${dateStr}_${data.type}${path.extname(file.originalname)}`;
+      const extension = path.extname(file.originalname).toLowerCase() || '.jpg';
+      const type = String(data.type || 'proof').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `fund/${this.formatStorageTimestamp()}_${type}${extension}`;
 
-      data.proof_image = await this.saveImage(file, filename, true);
+      data.proof_image = await this.saveImage(file, filename);
     }
     return this.fundRepo.save(this.fundRepo.create(data));
   }

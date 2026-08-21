@@ -254,7 +254,9 @@ Khi tạo hoặc cập nhật bài viết, frontend gửi `multipart/form-data` 
 
 Blog là khu vực nội dung dùng chung của đội. Người dùng thông thường có thể đọc danh sách bài viết tại `/blog`. Tài khoản admin có thể tạo bài viết mới, chỉnh sửa nội dung, thay ảnh minh họa hoặc xóa bài viết.
 
-Ở môi trường local, ảnh được lưu tại `fcdbb-backend/public/uploads/blog/` và tự động được phục vụ qua URL `/uploads/blog/...`. Khi có đủ `SUPABASE_URL` và `SUPABASE_KEY`, backend chuyển sang upload bucket `uploads` của Supabase mà không cần thay đổi frontend.
+Ở môi trường local, ảnh Blog được lưu tại `fcdbb-backend/public/uploads/blog/` với tên theo thời điểm tạo ảnh dạng `YYYYMMDD_HHMMSS_mmm.ext` và tự động được phục vụ qua URL `/uploads/blog/...`. Khi bài Blog bị xóa, ảnh tương ứng cũng được dọn khỏi storage; khi thay ảnh lúc chỉnh sửa, ảnh cũ được xóa sau khi ảnh mới lưu thành công. Khi có đủ `SUPABASE_URL` và `SUPABASE_KEY`, backend chuyển sang upload bucket `uploads` của Supabase mà không cần thay đổi frontend.
+
+Ảnh minh chứng của Quỹ được lưu riêng trong thư mục `fund/` của bucket `uploads`, với tên dạng `YYYYMMDD_HHMMSS_mmm_TYPE.ext`. Việc tách thư mục giúp tránh trộn lẫn ảnh Blog và ảnh giao dịch; khi giao dịch Quỹ bị xóa, ảnh minh chứng tương ứng cũng được dọn khỏi storage.
 
 ## Kiểm thử và build
 
