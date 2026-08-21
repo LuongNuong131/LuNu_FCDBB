@@ -46,3 +46,5 @@ Thumbs.db
 
 # Uploaded files (Quan trọng: Không push ảnh rác lên Github)
 public/uploads/
+
+data/

@@ -23,7 +23,7 @@ export class UploadService {
     const fileName = `${Date.now()}_${file.originalname.replace(/\s+/g, '_')}`;
 
     // Bắn file lên Supabase
-    const { data, error } = await this.supabase.storage
+    const { data: _data, error } = await this.supabase.storage
       .from(this.bucketName)
       .upload(fileName, file.buffer, {
         contentType: file.mimetype,
@@ -31,7 +31,9 @@ export class UploadService {
       });
 
     if (error) {
-      throw new InternalServerErrorException(`Lỗi upload ảnh: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Lỗi upload ảnh: ${error.message}`,
+      );
     }
 
     // Lấy link public để lưu vào Database

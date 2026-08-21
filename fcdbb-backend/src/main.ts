@@ -3,18 +3,20 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configuredOrigins = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
-  // Mở chốt chặn CORS để Vercel Frontend có thể gọi được API
   app.enableCors({
-    origin: '*', // Khi lên production, bạn có thể thay '*' bằng link Vercel của bạn cho bảo mật
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: configuredOrigins.length > 0 ? configuredOrigins : true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
 
-  // Sử dụng PORT của Render cấp, nếu chạy local thì dùng 3000
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-  
-  console.log(`Backend FCDBB is running on port: ${port}`);
+  const port = Number(process.env.PORT || 3000);
+  await app.listen(port, '0.0.0.0');
+  console.log(`Backend FCDBB is running on http://localhost:${port}`);
 }
-bootstrap();
+
+void bootstrap();
