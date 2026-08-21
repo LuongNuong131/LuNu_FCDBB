@@ -30,7 +30,7 @@
         <div class="space-y-3">
           <label class="group block cursor-pointer overflow-hidden rounded-2xl border border-dashed border-sky-300/25 bg-sky-300/[.04] transition hover:border-amber-300/45 hover:bg-amber-300/[.05]">
             <input type="file" accept="image/*" class="hidden" @change="handleImage">
-            <div v-if="form.imagePreview || form.image_url" class="relative aspect-[4/3]"><img :src="form.imagePreview || form.image_url" class="h-full w-full object-cover"><div class="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition group-hover:opacity-100"><span class="rounded-xl bg-black/50 px-3 py-2 text-xs font-extrabold uppercase tracking-[.14em] text-white">Đổi ảnh</span></div></div>
+            <div v-if="form.imagePreview || form.image_url" class="relative aspect-[4/3]"><img :src="resolveMediaUrl(form.imagePreview || form.image_url)" class="h-full w-full object-cover"><div class="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition group-hover:opacity-100"><span class="rounded-xl bg-black/50 px-3 py-2 text-xs font-extrabold uppercase tracking-[.14em] text-white">Đổi ảnh</span></div></div>
             <div v-else class="flex aspect-[4/3] flex-col items-center justify-center px-5 text-center"><span class="mb-3 text-4xl text-amber-300">＋</span><span class="text-xs font-extrabold uppercase tracking-[.16em] text-white">Thêm ảnh khoảnh khắc</span><span class="mt-2 text-[11px] text-slate-500">JPG, PNG hoặc WEBP</span></div>
           </label>
           <p class="text-[10px] leading-5 text-slate-500">Ảnh sẽ được lưu trên Supabase Storage. Chỉ admin mới nhìn thấy khu vực đăng bài này.</p>
@@ -43,23 +43,32 @@
     <section v-else class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       <article v-for="post in posts" :key="post.id" class="group overflow-hidden rounded-[1.5rem] border border-white/[.1] bg-white/[.035] shadow-xl transition duration-300 hover:-translate-y-1 hover:border-amber-300/30 hover:bg-white/[.055]">
         <div class="relative aspect-[16/10] overflow-hidden bg-slate-900">
-          <img v-if="post.image_url" :src="post.image_url" :alt="post.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+          <img v-if="post.image_url" :src="resolveMediaUrl(post.image_url)" :alt="post.title" class="h-full w-full cursor-zoom-in object-cover transition duration-500 group-hover:scale-105" @click="openImage(post)">
           <div v-else class="flex h-full items-center justify-center bg-[radial-gradient(circle_at_70%_20%,rgba(247,200,115,.2),transparent_28%),linear-gradient(135deg,#153b63,#07111f)]"><span class="text-6xl text-amber-300/70">⚽</span></div>
-          <div class="absolute inset-0 bg-gradient-to-t from-[#07111f]/75 via-transparent to-transparent"></div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#07111f]/75 via-transparent to-transparent"></div>
           <span class="absolute bottom-4 left-4 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-amber-200 backdrop-blur">FCDBB MOMENT</span>
         </div>
         <div class="p-5"><p class="text-[10px] font-mono uppercase tracking-[.12em] text-slate-500">{{ formatVietnamDateTime(post.created_at) }}</p><h2 class="mt-3 font-display text-xl font-extrabold leading-tight text-white">{{ post.title }}</h2><p v-if="post.excerpt" class="mt-3 line-clamp-3 text-sm leading-6 text-slate-400">{{ post.excerpt }}</p><p v-if="post.content" class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-300">{{ post.content }}</p><div v-if="isAdmin" class="mt-5 flex gap-2 border-t border-white/[.08] pt-4"><button @click="editPost(post)" class="rounded-lg border border-sky-300/20 bg-sky-300/[.08] px-3 py-2 text-[10px] font-extrabold uppercase tracking-[.12em] text-sky-200 transition hover:bg-sky-300/20">Sửa</button><button @click="removePost(post.id)" class="rounded-lg border border-rose-300/20 bg-rose-400/[.08] px-3 py-2 text-[10px] font-extrabold uppercase tracking-[.12em] text-rose-200 transition hover:bg-rose-400/20">Xóa</button></div></div>
       </article>
     </section>
+    <ImagePreviewModal
+      v-if="activeImage"
+      :src="activeImage.src"
+      :alt="activeImage.alt"
+      :filename="activeImage.filename"
+      @close="activeImage = null"
+    />
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import axios from 'axios';
+import ImagePreviewModal from '../components/ImagePreviewModal.vue';
 import { useToast } from '../composables/useToast';
 import { useDialog } from '../composables/useDialog';
 import { formatVietnamDateTime } from '../utils/datetime';
+import { resolveMediaUrl } from '../utils/media';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const currentUser = JSON.parse(localStorage.getItem('fcdbb_user') || '{}');
@@ -70,6 +79,7 @@ const posts = ref([]);
 const loading = ref(true);
 const editingId = ref(null);
 const form = reactive({ title: '', excerpt: '', content: '', image: null, image_url: '', imagePreview: '' });
+const activeImage = ref(null);
 
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('fcdbb_token') || ''}` });
 
@@ -90,6 +100,15 @@ const handleImage = (event) => {
   if (!file) return;
   form.image = file;
   form.imagePreview = URL.createObjectURL(file);
+};
+
+const openImage = (post) => {
+  if (!post.image_url) return;
+  activeImage.value = {
+    src: resolveMediaUrl(post.image_url),
+    alt: post.title || 'Ảnh bài viết Blog',
+    filename: `fcdbb-blog-${post.id || 'image'}`,
+  };
 };
 
 const editPost = (post) => {
