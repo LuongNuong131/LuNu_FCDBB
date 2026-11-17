@@ -14,6 +14,22 @@
       href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("fcdbb_theme") === "dark" ? "dark" : "light";
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+      document
+        .querySelector('meta[name="theme-color"]')
+        .setAttribute(
+          "content",
+          document.documentElement.dataset.theme === "dark"
+            ? "#101923"
+            : "#f2f6f8",
+        );
+    </script>
     <title>FC Đá Bay Bóng</title>
   </head>
   <body>

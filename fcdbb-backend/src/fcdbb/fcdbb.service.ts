@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { MatchAudit, MatchReport, Season } from '../football/football.entity';
 import type { Actor } from '../football/football.service';
+import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import * as path from 'path';
 import { mkdir, unlink, writeFile } from 'fs/promises';
@@ -102,6 +103,7 @@ export class FcdbbService implements OnModuleInit {
       );
     if (await this.userRepo.existsBy({ username: data.username.trim() }))
       throw new ConflictException('Tên tài khoản đã được sử dụng.');
+    const homeTeam = this.validateHomeTeam(data.home_team);
     const hashed = await bcrypt.hash(data.password, 10);
     return this.sanitizeUser(
       await this.userRepo.save(
@@ -110,9 +112,24 @@ export class FcdbbService implements OnModuleInit {
           name: data.name.trim(),
           password: hashed,
           role: 'user',
+          home_team: homeTeam,
         }),
       ),
     );
+  }
+
+  private validateHomeTeam(team: unknown): 'A' | 'B' | null {
+    if (team == null || team === '') return null;
+    if (team !== 'A' && team !== 'B')
+      throw new BadRequestException('Đội cố định chỉ có thể là A hoặc B.');
+    return team;
+  }
+
+  async setHomeTeam(id: number, team: unknown) {
+    const user = await this.userRepo.findOneBy({ id });
+    if (!user) throw new BadRequestException('Cầu thủ không tồn tại.');
+    await this.userRepo.update(id, { home_team: this.validateHomeTeam(team) });
+    return this.getProfileById(id);
   }
 
   async getProfiles() {
@@ -522,7 +539,18 @@ export class FcdbbService implements OnModuleInit {
   }
 
   async getBlogPosts() {
-    return this.blogRepo.find({ order: { created_at: 'DESC' } });
+    const posts = await this.blogRepo.find({
+      order: { created_at: 'DESC', id: 'DESC' },
+    });
+    const authors = await this.userRepo.find({
+      select: { id: true, name: true },
+    });
+    return posts.map((post) => ({
+      ...post,
+      images: this.blogImages(post),
+      author_name:
+        authors.find((u) => u.id === post.author_id)?.name || 'Ban điều hành',
+    }));
   }
 
   private getAdminFromToken(authorization?: string) {
@@ -542,59 +570,195 @@ export class FcdbbService implements OnModuleInit {
     }
   }
 
-  async createBlogPost(
-    data: Partial<BlogPost>,
-    image?: Express.Multer.File,
-    authorization?: string,
-  ) {
-    const admin = this.getAdminFromToken(authorization);
-    if (!data.title?.trim())
-      throw new BadRequestException('Tiêu đề bài viết không được để trống.');
-    const imageUrl = image
-      ? await this.uploadImageToBucket(image, 'blog')
-      : data.image_url;
-    return this.blogRepo.save(
-      this.blogRepo.create({
-        title: data.title.trim(),
-        excerpt: data.excerpt?.trim() || undefined,
-        content: data.content?.trim() || undefined,
-        image_url: imageUrl || undefined,
-        author_id: Number(admin.sub),
-      }),
-    );
+  private blogImages(post: BlogPost): string[] {
+    return post.images ?? (post.image_url ? [post.image_url] : []);
   }
 
-  async updateBlogPost(
-    id: number,
-    data: Partial<BlogPost>,
-    image?: Express.Multer.File,
+  private parseBlogArray(value: unknown, field: string): unknown[] | undefined {
+    if (value === undefined) return undefined;
+    try {
+      const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+      if (!Array.isArray(parsed)) throw new Error();
+      return parsed;
+    } catch {
+      throw new BadRequestException(`Danh sách ${field} không hợp lệ.`);
+    }
+  }
+
+  private validateBlogImage(file: Express.Multer.File) {
+    const b = file.buffer;
+    const mime = b?.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
+      ? 'image/jpeg'
+      : b?.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+        ? 'image/png'
+        : ['GIF87a', 'GIF89a'].includes(b?.subarray(0, 6).toString('ascii'))
+          ? 'image/gif'
+          : b?.subarray(0, 4).toString('ascii') === 'RIFF' &&
+              b?.subarray(8, 12).toString('ascii') === 'WEBP'
+            ? 'image/webp'
+            : null;
+    if (!mime || mime !== file.mimetype)
+      throw new BadRequestException(
+        'Tệp không phải ảnh JPG, PNG, WEBP hoặc GIF hợp lệ.',
+      );
+    if (file.size > 8 * 1024 * 1024)
+      throw new BadRequestException('Mỗi ảnh tối đa 8 MB.');
+    const ext = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+      'image/gif': '.gif',
+    }[mime];
+    return { ...file, originalname: `photo${ext}` };
+  }
+
+  private async saveBlog(
+    data: any,
+    files: Express.Multer.File[],
+    authorization?: string,
+    id?: number,
+  ) {
+    const admin = this.getAdminFromToken(authorization);
+    const previous = id ? await this.blogRepo.findOneBy({ id }) : null;
+    if (id && !previous)
+      throw new BadRequestException('Bài viết không tồn tại.');
+    if (
+      previous &&
+      data.revision !== undefined &&
+      Number(data.revision) !== previous.revision
+    )
+      throw new ConflictException(
+        'Bài viết đã thay đổi ở phiên khác. Tải lại trước khi lưu.',
+      );
+    const title = data.title ?? previous?.title;
+    const excerpt = data.excerpt ?? previous?.excerpt ?? '';
+    const content = data.content ?? previous?.content ?? '';
+    if (
+      typeof title !== 'string' ||
+      !title.trim() ||
+      title.length > 200 ||
+      typeof excerpt !== 'string' ||
+      excerpt.length > 500 ||
+      typeof content !== 'string' ||
+      content.length > 30000
+    )
+      throw new BadRequestException(
+        'Nhập tiêu đề tối đa 200 ký tự, mô tả 500 ký tự và nội dung 30.000 ký tự.',
+      );
+    const originalImages = previous ? this.blogImages(previous) : [];
+    const retainedInput = this.parseBlogArray(
+      data.retained_images,
+      'ảnh giữ lại',
+    );
+    const retained =
+      retainedInput ??
+      (files.length ? originalImages.slice(1) : originalImages);
+    if (
+      retained.some(
+        (url) =>
+          typeof url !== 'string' || !originalImages.includes(url as string),
+      ) ||
+      new Set(retained).size !== retained.length
+    )
+      throw new BadRequestException(
+        'Chỉ được giữ lại ảnh có trong bài viết này.',
+      );
+    if (retained.length + files.length > 12)
+      throw new BadRequestException('Mỗi bài viết tối đa 12 ảnh.');
+    const validated = files.map((file) => this.validateBlogImage(file));
+    const order = this.parseBlogArray(data.image_order, 'thứ tự ảnh');
+    if (
+      order &&
+      (order.length !== retained.length + files.length ||
+        new Set(order.map((x) => `${typeof x}:${x}`)).size !== order.length ||
+        order.some((x) =>
+          typeof x === 'number'
+            ? !Number.isInteger(x) || x < 0 || x >= files.length
+            : typeof x !== 'string' || !retained.includes(x),
+        ))
+    )
+      throw new BadRequestException('Thứ tự ảnh không hợp lệ.');
+    const uploaded: string[] = [];
+    let saved: BlogPost;
+    try {
+      for (const file of validated)
+        uploaded.push((await this.uploadImageToBucket(file, 'blog'))!);
+      const images = order
+        ? order.map((x) =>
+            typeof x === 'number' ? uploaded[x] : (x as string),
+          )
+        : retainedInput === undefined && files.length
+          ? [...uploaded, ...(retained as string[])]
+          : [...(retained as string[]), ...uploaded];
+      const changes = {
+        title: title.trim(),
+        excerpt: excerpt.trim(),
+        content: content.trim(),
+        images,
+        image_url: images[0] ?? null,
+        revision: (previous?.revision ?? 0) + 1,
+      };
+      if (previous) {
+        const result = await this.blogRepo
+          .createQueryBuilder()
+          .update(BlogPost)
+          .set(changes)
+          .where('id = :id AND revision = :revision', {
+            id,
+            revision: previous.revision,
+          })
+          .execute();
+        if (!result.affected)
+          throw new ConflictException(
+            'Bài viết vừa được sửa. Tải lại để đối chiếu trước khi lưu.',
+          );
+        saved = await this.blogRepo.findOneByOrFail({ id: previous.id });
+      } else
+        saved = await this.blogRepo.save(
+          this.blogRepo.create({ ...changes, author_id: Number(admin.sub) }),
+        );
+    } catch (error) {
+      await Promise.all(uploaded.map((url) => this.deleteStoredImage(url)));
+      throw error;
+    }
+    const currentImages = this.blogImages(saved);
+    await Promise.all(
+      originalImages
+        .filter((url) => !currentImages.includes(url))
+        .map((url) => this.deleteStoredImage(url)),
+    );
+    return { ...saved, images: currentImages };
+  }
+
+  createBlogPost(
+    data: any,
+    images: Express.Multer.File[] = [],
     authorization?: string,
   ) {
-    this.getAdminFromToken(authorization);
-    const post = await this.blogRepo.findOne({ where: { id } });
-    if (!post) throw new BadRequestException('Bài viết không tồn tại.');
-    const imageUrl = image
-      ? await this.uploadImageToBucket(image, 'blog')
-      : data.image_url;
-    await this.blogRepo.update(id, {
-      title: data.title?.trim() || post.title,
-      excerpt: data.excerpt?.trim() ?? post.excerpt,
-      content: data.content?.trim() ?? post.content,
-      image_url: imageUrl || post.image_url,
-    });
-    const updatedPost = await this.blogRepo.findOne({ where: { id } });
-    if (image && post.image_url && post.image_url !== updatedPost?.image_url) {
-      await this.deleteStoredImage(post.image_url);
-    }
-    return updatedPost;
+    return this.saveBlog(data, images, authorization);
+  }
+
+  updateBlogPost(
+    id: number,
+    data: any,
+    images: Express.Multer.File[] = [],
+    authorization?: string,
+  ) {
+    return this.saveBlog(data, images, authorization, id);
   }
 
   async deleteBlogPost(id: number, authorization?: string) {
     this.getAdminFromToken(authorization);
-    const post = await this.blogRepo.findOne({ where: { id } });
+    const post = await this.blogRepo.findOneBy({ id });
     if (!post) throw new BadRequestException('Bài viết không tồn tại.');
-    await this.blogRepo.delete(id);
-    await this.deleteStoredImage(post.image_url);
+    const result = await this.blogRepo.delete({ id, revision: post.revision });
+    if (!result.affected)
+      throw new ConflictException(
+        'Bài viết vừa thay đổi. Tải lại trước khi xóa.',
+      );
+    await Promise.all(
+      this.blogImages(post).map((url) => this.deleteStoredImage(url)),
+    );
     return { message: 'Đã xóa bài viết.' };
   }
 
@@ -633,7 +797,7 @@ export class FcdbbService implements OnModuleInit {
   private async uploadImageToBucket(file: Express.Multer.File, folder: string) {
     if (!file) return undefined;
     const extension = path.extname(file.originalname).toLowerCase() || '.jpg';
-    const fileName = `${this.formatStorageTimestamp()}${extension}`;
+    const fileName = `${this.formatStorageTimestamp()}_${randomUUID().slice(0, 8)}${extension}`;
     return this.saveImage(file, `${folder}/${fileName}`);
   }
 

@@ -12,7 +12,7 @@
     <div v-if="error" class="error-state" role="alert">
       {{ error }} <button class="btn secondary" @click="load">Thử lại</button>
     </div>
-    <div class="grid gap-4 sm:grid-cols-[1fr_200px] mb-6">
+    <div class="grid gap-4 sm:grid-cols-[1fr_180px_180px] mb-6">
       <label
         ><span class="field-label">Tìm cầu thủ</span
         ><input
@@ -27,6 +27,30 @@
           <option value="user">Cầu thủ</option>
           <option value="admin">Quản trị viên</option>
         </select></label
+      >
+      <label
+        ><span class="field-label">Đội cố định</span
+        ><select v-model="team" class="field" aria-label="Lọc đội cố định">
+          <option value="">Tất cả đội</option>
+          <option value="A">Đội A</option>
+          <option value="B">Đội B</option>
+          <option value="unassigned">Chưa phân đội</option>
+        </select></label
+      >
+    </div>
+    <div class="team-counter-row">
+      <span class="team-counter"
+        ><span class="team-chip">A</span
+        ><strong>{{
+          players.filter((p) => p.home_team === "A").length
+        }}</strong>
+        cầu thủ</span
+      ><span class="team-counter"
+        ><span class="team-chip b">B</span
+        ><strong>{{
+          players.filter((p) => p.home_team === "B").length
+        }}</strong>
+        cầu thủ</span
       >
     </div>
     <p v-if="loading" class="empty-state" role="status">Đang tải đội hình…</p>
@@ -43,7 +67,13 @@
           <span class="badge">{{
             p.role === "admin" ? "Quản trị viên" : "Cầu thủ"
           }}</span
-          ><ClubIcon name="arrow" />
+          ><span
+            class="badge"
+            :class="
+              p.home_team === 'A' ? 'green' : p.home_team === 'B' ? 'blue' : ''
+            "
+            >{{ p.home_team ? `Đội ${p.home_team}` : "Chưa phân đội" }}</span
+          >
         </div>
         <div class="mt-5 mb-4">
           <ClubAvatar
@@ -97,6 +127,7 @@ const players = ref([]),
   stats = ref([]),
   search = ref(""),
   role = ref(""),
+  team = ref(""),
   error = ref(""),
   loading = ref(true);
 const playerStats = (id) => stats.value.find((p) => p.userId === id) || {};
@@ -104,6 +135,10 @@ const filtered = computed(() =>
   players.value.filter(
     (p) =>
       (!role.value || p.role === role.value) &&
+      (!team.value ||
+        (team.value === "unassigned"
+          ? !p.home_team
+          : p.home_team === team.value)) &&
       `${p.name} ${p.nickname || ""} ${p.position}`
         .toLocaleLowerCase("vi")
         .includes(search.value.toLocaleLowerCase("vi")),

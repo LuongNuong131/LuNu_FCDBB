@@ -8,11 +8,16 @@ import {
   Body,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   Req,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileInterceptor,
+  FileFieldsInterceptor,
+} from '@nestjs/platform-express';
 import { Headers } from '@nestjs/common';
 import { FcdbbService } from './fcdbb.service';
 import { ClubAuthGuard } from '../football/auth.guard';
@@ -45,6 +50,12 @@ export class FcdbbController {
     @Body() body: any,
   ) {
     return this.srv.updateUser(id, body);
+  }
+  @Put('users/:id/team') setHomeTeam(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { home_team: unknown },
+  ) {
+    return this.srv.setHomeTeam(id, body.home_team);
   }
   @Delete('users/:id') deleteUser(@Param('id', ParseIntPipe) id: number) {
     return this.srv.deleteUser(id);
@@ -111,20 +122,79 @@ export class FcdbbController {
   @Get('blog') getBlogPosts() {
     return this.srv.getBlogPosts();
   }
-  @Post('blog') @UseInterceptors(FileInterceptor('image')) createBlogPost(
+  @Post('blog')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'images', maxCount: 12 },
+        { name: 'image', maxCount: 1 },
+      ],
+      {
+        limits: { fileSize: 8 * 1024 * 1024, files: 12, fields: 12 },
+        fileFilter: (_req, file, cb) => {
+          if (
+            !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(
+              file.mimetype,
+            )
+          )
+            return cb(
+              new BadRequestException('Chỉ nhận ảnh JPG, PNG, WEBP hoặc GIF.'),
+              false,
+            );
+          cb(null, true);
+        },
+      },
+    ),
+  )
+  createBlogPost(
     @Body() body: any,
-    @UploadedFile() image: Express.Multer.File,
+    @UploadedFiles()
+    files: { images?: Express.Multer.File[]; image?: Express.Multer.File[] },
     @Headers('authorization') authorization?: string,
   ) {
-    return this.srv.createBlogPost(body, image, authorization);
+    return this.srv.createBlogPost(
+      body,
+      [...(files?.images || []), ...(files?.image || [])],
+      authorization,
+    );
   }
-  @Put('blog/:id') @UseInterceptors(FileInterceptor('image')) updateBlogPost(
+  @Put('blog/:id')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'images', maxCount: 12 },
+        { name: 'image', maxCount: 1 },
+      ],
+      {
+        limits: { fileSize: 8 * 1024 * 1024, files: 12, fields: 12 },
+        fileFilter: (_req, file, cb) => {
+          if (
+            !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(
+              file.mimetype,
+            )
+          )
+            return cb(
+              new BadRequestException('Chỉ nhận ảnh JPG, PNG, WEBP hoặc GIF.'),
+              false,
+            );
+          cb(null, true);
+        },
+      },
+    ),
+  )
+  updateBlogPost(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: any,
-    @UploadedFile() image: Express.Multer.File,
+    @UploadedFiles()
+    files: { images?: Express.Multer.File[]; image?: Express.Multer.File[] },
     @Headers('authorization') authorization?: string,
   ) {
-    return this.srv.updateBlogPost(id, body, image, authorization);
+    return this.srv.updateBlogPost(
+      id,
+      body,
+      [...(files?.images || []), ...(files?.image || [])],
+      authorization,
+    );
   }
   @Delete('blog/:id') deleteBlogPost(
     @Param('id', ParseIntPipe) id: number,

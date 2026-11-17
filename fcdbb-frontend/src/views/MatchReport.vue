@@ -48,6 +48,7 @@
           </button>
         </div>
       </div>
+      <MatchFacts :match="match" class="mb-6" />
       <section class="pitch">
         <div class="pitch-lines"></div>
         <div class="pitch-content">
@@ -138,9 +139,10 @@
             Nạp người đã điểm danh
           </button>
         </div>
-        <p class="hint mb-3">
-          Đội hình thi đấu và điểm danh GPS được lưu riêng. Cầu thủ chỉ thuộc
-          một đội trong trận này.
+        <p class="team-assignment-note mb-3">
+          Đội cố định do admin cấu hình. Nạp điểm danh để lấy đội mặc định, rồi
+          chuyển cầu thủ sang đội đối diện khi cần cân bằng quân số. Thay đổi ở
+          đây chỉ áp dụng cho trận này.
         </p>
         <label class="block mb-3"
           ><span class="field-label">Tìm cầu thủ để chia đội</span
@@ -150,9 +152,42 @@
             placeholder="Tên cầu thủ…"
             type="search"
         /></label>
+        <div class="team-counter-row">
+          <span class="team-counter"
+            ><span class="team-chip">A</span
+            ><strong>{{
+              draft.roster.filter((p) => p.team === "A").length
+            }}</strong>
+            cầu thủ</span
+          ><span class="team-counter"
+            ><span class="team-chip b">B</span
+            ><strong>{{
+              draft.roster.filter((p) => p.team === "B").length
+            }}</strong>
+            cầu thủ</span
+          >
+        </div>
         <div class="editor-players">
           <label v-for="p in filteredPlayers" :key="p.id" class="editor-player"
-            ><span class="text-sm font-medium">{{ p.name }}</span
+            ><span class="min-w-0"
+              ><span class="block text-sm font-medium">{{ p.name }}</span
+              ><span class="block text-xs muted">{{
+                p.home_team
+                  ? `Đội cố định ${p.home_team}`
+                  : "Chưa phân đội cố định"
+              }}</span
+              ><span
+                v-if="
+                  p.home_team &&
+                  draft.roster.find((x) => x.userId === p.id)?.team &&
+                  draft.roster.find((x) => x.userId === p.id).team !==
+                    p.home_team
+                "
+                class="team-loan"
+                ><ClubIcon name="swap" />Đá cho
+                {{ draft.roster.find((x) => x.userId === p.id).team }} ở trận
+                này</span
+              ></span
             ><select
               class="field"
               :value="draft.roster.find((x) => x.userId === p.id)?.team || ''"
@@ -349,7 +384,14 @@
                   :key="p.userId"
                   class="person-row"
                 >
-                  <span>{{ p.name }}</span
+                  <span
+                    >{{ p.name
+                    }}<span
+                      v-if="p.homeTeam && p.homeTeam !== p.team"
+                      class="team-loan block"
+                      >Đội cố định {{ p.homeTeam }} · Đá cho {{ p.team }} trận
+                      này</span
+                    ></span
                   ><span class="flex gap-1"
                     ><span
                       v-if="report.mvp_user_id === p.userId"
@@ -536,6 +578,7 @@
 import { ref, computed, watch } from "vue";
 import { useRoute, onBeforeRouteLeave } from "vue-router";
 import api from "../api";
+import MatchFacts from "../components/football/MatchFacts.vue";
 import ClubIcon from "../components/ClubIcon.vue";
 import { useToast } from "../composables/useToast";
 import { useDialog } from "../composables/useDialog";
@@ -590,7 +633,7 @@ const availablePlayers = computed(() => [
   ...users.value,
   ...report.value.roster
     .filter((p) => !users.value.some((u) => u.id === p.userId))
-    .map((p) => ({ id: p.userId, name: p.name })),
+    .map((p) => ({ id: p.userId, name: p.name, home_team: p.homeTeam })),
 ]);
 const filteredPlayers = computed(() =>
   availablePlayers.value.filter((p) =>
@@ -604,6 +647,7 @@ const beginEdit = () => {
   playerSearch.value = "";
   saveError.value = "";
   editing.value = true;
+  if (!draft.value.roster.length) importAttendance();
 };
 const dirty = computed(
   () =>
@@ -625,7 +669,12 @@ const setTeam = (p, team) => {
   const old = draft.value.roster.find((x) => x.userId === p.id);
   draft.value.roster = draft.value.roster.filter((x) => x.userId !== p.id);
   if (team)
-    draft.value.roster.push({ userId: p.id, name: old?.name || p.name, team });
+    draft.value.roster.push({
+      userId: p.id,
+      name: old?.name || p.name,
+      team,
+      homeTeam: old?.homeTeam ?? p.home_team ?? null,
+    });
   draft.value.goals = draft.value.goals
     .filter((g) => team || g.userId !== p.id)
     .map((g) => ({
@@ -639,10 +688,17 @@ const setTeam = (p, team) => {
   });
 };
 const importAttendance = () => {
-  details.value.attendances.forEach((a, i) => {
-    if (!draft.value.roster.some((p) => p.userId === a.user.id))
-      setTeam(a.user, i % 2 ? "B" : "A");
+  let missing = 0;
+  (details.value.attendances || []).forEach((a) => {
+    if (draft.value.roster.some((p) => p.userId === a.user.id)) return;
+    if (a.user.home_team) setTeam(a.user, a.user.home_team);
+    else missing++;
   });
+  if (missing)
+    addToast(
+      `${missing} cầu thủ chưa có đội cố định. Chọn đội trận thủ công hoặc phân đội trong Quản trị.`,
+      "warning",
+    );
 };
 const addGoal = () => {
   draft.value.goals.push({
@@ -718,9 +774,10 @@ const exportReport = () =>
         : "Chưa chốt",
     ],
     [],
-    ["Đội hình", "Đội", "Bàn", "MVP"],
+    ["Đội hình", "Đội cố định khi ghi nhận", "Đội trận", "Bàn", "MVP"],
     ...report.value.roster.map((p) => [
       p.name,
+      p.homeTeam || "Chưa ghi nhận",
       p.team,
       goalsFor(p.userId),
       report.value.mvp_user_id === p.userId ? "Có" : "",
