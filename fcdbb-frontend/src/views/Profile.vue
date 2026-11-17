@@ -1,6 +1,6 @@
 <template>
-  <div v-if="profile" class="mx-auto w-full max-w-4xl space-y-6">
-    <section class="glass-panel relative overflow-hidden !p-0">
+  <div v-if="profile" class="profile-page mx-auto w-full max-w-4xl space-y-6">
+    <section class="glass-panel profile-hero relative overflow-hidden !p-0">
       <div class="h-36 bg-emerald-100 sm:h-44">
         <div
           class="h-full opacity-30"
@@ -160,6 +160,7 @@
             id="profile-profile-height"
             v-model="profile.height"
             type="number"
+            inputmode="decimal"
             class="glass-input"
             :disabled="!isOwner && !isAdmin"
           />
@@ -173,6 +174,7 @@
             id="profile-profile-weight"
             v-model="profile.weight"
             type="number"
+            inputmode="decimal"
             class="glass-input"
             :disabled="!isOwner && !isAdmin"
           />
@@ -186,6 +188,7 @@
             id="profile-profile-left_foot"
             v-model="profile.left_foot"
             type="number"
+            inputmode="decimal"
             min="1"
             max="5"
             class="glass-input"
@@ -201,6 +204,7 @@
             id="profile-profile-right_foot"
             v-model="profile.right_foot"
             type="number"
+            inputmode="decimal"
             min="1"
             max="5"
             class="glass-input"
@@ -318,7 +322,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, watch, computed } from "vue";
 import { useRoute } from "vue-router";
 import axios from "axios";
 import ClubAvatar from "../components/ClubAvatar.vue";
@@ -337,14 +341,27 @@ const confirmPassword = ref("");
 const isOwner = computed(() => currentUser.id == route.params.id);
 const isAdmin = computed(() => currentUser.role === "admin");
 
-onMounted(async () => {
-  try {
-    const res = await axios.get(`${API}/users/${route.params.id}`);
-    profile.value = res.data;
-  } catch (e) {
-    console.error("Lỗi lấy thông tin:", e);
-  }
-});
+watch(
+  () => route.params.id,
+  async (id, _, onCleanup) => {
+    const controller = new AbortController();
+    onCleanup(() => controller.abort());
+    profile.value = null;
+    currentPassword.value = "";
+    newPassword.value = "";
+    confirmPassword.value = "";
+    try {
+      const res = await axios.get(`${API}/users/${id}`, {
+        signal: controller.signal,
+      });
+      profile.value = res.data;
+    } catch (e) {
+      if (e.code !== "ERR_CANCELED")
+        addToast("Chưa tải được hồ sơ cầu thủ. Vui lòng thử lại.", "error");
+    }
+  },
+  { immediate: true },
+);
 
 const uploadAvatar = async (event) => {
   const file = event.target.files[0];
@@ -354,15 +371,14 @@ const uploadAvatar = async (event) => {
     return addToast("Vui lòng chọn một tệp hình ảnh.", "warning");
   }
   uploadingAvatar.value = true;
+  const targetId = route.params.id;
   const formData = new FormData();
   formData.append("file", file);
   try {
-    const res = await axios.post(
-      `${API}/users/${route.params.id}/avatar`,
-      formData,
-    );
-    profile.value.avatar = res.data.avatar;
-    if (isOwner.value) {
+    const res = await axios.post(`${API}/users/${targetId}/avatar`, formData);
+    if (profile.value && route.params.id === targetId)
+      profile.value.avatar = res.data.avatar;
+    if (currentUser.id == targetId) {
       currentUser.avatar = res.data.avatar;
       localStorage.setItem("fcdbb_user", JSON.stringify(currentUser));
     }

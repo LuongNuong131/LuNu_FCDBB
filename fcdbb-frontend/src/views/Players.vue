@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="players-page">
     <div class="page-top">
       <div>
         <h1 class="page-heading">Những người đồng đội.</h1>
@@ -12,7 +12,7 @@
     <div v-if="error" class="error-state" role="alert">
       {{ error }} <button class="btn secondary" @click="load">Thử lại</button>
     </div>
-    <div class="grid gap-4 sm:grid-cols-[1fr_180px_180px] mb-6">
+    <div class="player-filters grid gap-4 sm:grid-cols-[1fr_180px_180px] mb-6">
       <label
         ><span class="field-label">Tìm cầu thủ</span
         ><input
@@ -56,9 +56,9 @@
     <p v-if="loading" class="empty-state" role="status">Đang tải đội hình…</p>
     <section
       v-else-if="filtered.length"
-      class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      class="player-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
-      <article v-for="p in filtered" :key="p.id" class="match-card">
+      <article v-for="p in filtered" :key="p.id" class="match-card player-card">
         <div class="flex justify-between items-center">
           <span class="badge">{{
             p.role === "admin" ? "Quản trị viên" : "Cầu thủ"
@@ -71,7 +71,7 @@
             >{{ p.home_team ? `Đội ${p.home_team}` : "Chưa phân đội" }}</span
           >
         </div>
-        <div class="mt-5 mb-4">
+        <div class="player-identity">
           <ClubAvatar
             :src="p.avatar"
             :name="p.name"

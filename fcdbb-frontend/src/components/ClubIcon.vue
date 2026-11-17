@@ -15,6 +15,10 @@
 <script setup>
 defineProps({ name: { type: String, default: "calendar" } });
 const paths = {
+  info: "M12 8h.01M11 12h1v5M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z",
+  filter: "M4 7h16M7 12h10m-7 5h4M7 4v6m10-1v6m-5-1v6",
+  eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm10-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
+  chevron: "m6 9 6 6 6-6",
   sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-6v2m0 16v2M2 12h2m16 0h2M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2",
   moon: "M21 13a9 9 0 0 1-10-10 9 9 0 1 0 10 10Z",
   image: "M4 3h16v18H4ZM4 16l5-5 4 4 3-3 4 4M15 7h.01",

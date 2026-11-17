@@ -80,7 +80,11 @@
           </div>
         </div>
       </section>
-      <form v-if="editing" class="panel mt-6" @submit.prevent="save">
+      <form
+        v-if="editing"
+        class="panel report-editor mt-6"
+        @submit.prevent="save"
+      >
         <div class="section-head">
           <div>
             <h2>Biên bản trận đấu</h2>
@@ -100,6 +104,11 @@
         <div v-if="saveError" class="error-state" role="alert">
           {{ saveError }}
         </div>
+        <nav class="editor-jumps" aria-label="Đi đến phần biên bản">
+          <a href="#report-roster">Đội hình</a
+          ><a href="#report-goals">Bàn thắng</a
+          ><a href="#report-result">Kết quả</a>
+        </nav>
         <div class="form-row">
           <label
             ><span class="field-label">Mùa giải</span
@@ -128,7 +137,7 @@
             </select></label
           >
         </div>
-        <div class="section-head mt-7">
+        <div id="report-roster" class="section-head mt-7">
           <h2>Đội hình thực tế</h2>
           <button
             type="button"
@@ -200,7 +209,7 @@
             </select></label
           >
         </div>
-        <div class="section-head mt-7">
+        <div id="report-goals" class="section-head mt-7">
           <div>
             <h2>Bàn thắng & kiến tạo</h2>
             <p class="hint">
@@ -277,7 +286,7 @@
         <p v-if="!draft.goals.length" class="hint py-4">
           Chưa có bàn thắng. Trận hòa 0–0 có thể chốt mà không cần thêm bàn.
         </p>
-        <div class="form-row mt-6">
+        <div id="report-result" class="form-row score-inputs mt-6">
           <label
             ><span class="field-label">Tỉ số đội A</span
             ><input
@@ -345,7 +354,7 @@
           Khi chốt, tỉ số phải khớp tổng bàn thắng và mỗi đội phải có ít nhất
           một cầu thủ. Mọi thay đổi được lưu vào nhật ký.
         </p>
-        <div class="flex flex-wrap gap-3">
+        <div class="report-save-bar">
           <button class="btn" :disabled="saving">
             {{
               saving

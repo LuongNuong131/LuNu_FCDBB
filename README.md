@@ -19,6 +19,8 @@
 
 Giao diện sáng/tối thống nhất trên desktop/mobile (ghi nhớ lựa chọn), đội cố định A/B do admin cấu hình và điều chỉnh đội riêng cho từng trận, blog album nhiều ảnh, trang chủ 12 trận mỗi trang (chọn tối đa 48), tìm kiếm và lọc lịch sử. Mỗi trận có biên bản riêng: mùa giải, đội hình A/B, tỉ số, bàn thắng/kiến tạo/phản lưới, MVP, ghi chú, điểm danh GPS và nhật ký chỉnh sửa. Thêm bảng xếp hạng mùa giải, thống kê cầu thủ, xuất CSV, phân quyền API và CI tự động.
 
+Giao diện ưu tiên điện thoại: thanh điều hướng dưới, menu dạng bảng mở từ dưới lên, trang chủ gọn và bộ lọc có thể thu gọn. Thành viên và thu chi chuyển thành thẻ trên màn hình nhỏ; biểu mẫu quản trị mở khi cần. Biên bản có lối tắt tới đội hình/bàn thắng/kết quả và thanh lưu thuận tay. Hỗ trợ vùng an toàn màn hình, nền sáng/tối, bàn phím và màn hình từ 320 px.
+
 **[Hướng dẫn đầy đủ, API, schema và triển khai](docs/club-management.md)** · [Design system](docs/design-system.md)
 
 ## Mục lục

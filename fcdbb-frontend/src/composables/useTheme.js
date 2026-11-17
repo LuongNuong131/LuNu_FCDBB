@@ -8,7 +8,7 @@ const apply = (value) => {
   document.documentElement.dataset.theme = theme.value;
   document
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", theme.value === "dark" ? "#101923" : "#f2f6f8");
+    ?.setAttribute("content", theme.value === "dark" ? "#101923" : "#f3f6f4");
 };
 export function useTheme() {
   if (!listening) {
