@@ -1,29 +1,34 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { FcdbbModule } from '../src/fcdbb/fcdbb.module';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
-
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+describe('Application health', () => {
+  let app: INestApplication;
+  beforeAll(async () => {
+    const module = await Test.createTestingModule({
+      imports: [
+        TypeOrmModule.forRoot({
+          type: 'better-sqlite3',
+          database: ':memory:',
+          autoLoadEntities: true,
+          synchronize: true,
+        }),
+        FcdbbModule,
+      ],
     }).compile();
-
-    app = moduleFixture.createNestApplication();
+    app = module.createNestApplication();
     await app.init();
   });
-
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  afterAll(async () => {
+    await app?.close();
   });
-
-  afterEach(async () => {
-    await app.close();
+  it('exposes the actual public health endpoint without authentication', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/ping')
+      .expect(200);
+    expect(response.body.status).toBe('awake');
+    expect(Number.isNaN(Date.parse(response.body.time))).toBe(false);
   });
 });

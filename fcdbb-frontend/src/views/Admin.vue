@@ -1,122 +1,321 @@
 <template>
-  <div class="mx-auto w-full max-w-7xl space-y-7">
-    <!-- Header Tabs -->
-    <div class="flex flex-wrap gap-2 border-b border-white/[.08] pb-4">
-      <button @click="tab = 'matches'" :class="tab === 'matches' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] border-blue-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'" class="rounded-xl border px-4 py-3 text-[10px] font-extrabold uppercase tracking-[.12em] transition-all duration-300 flex items-center gap-2">
-        <span class="text-xl">⚽</span> Quản lý Trận Đấu
-      </button>
-      <button @click="tab = 'users'" :class="tab === 'users' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] border-blue-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'" class="rounded-xl border px-4 py-3 text-[10px] font-extrabold uppercase tracking-[.12em] transition-all duration-300 flex items-center gap-2">
-        <span class="text-xl">👥</span> Tổng Kho Cầu Thủ
+  <div>
+    <div class="page-top">
+      <div>
+        <h1 class="page-heading">Không gian quản trị.</h1>
+        <p class="page-intro">
+          Sắp lịch buổi đá, quản lý thành viên và lưu lại hành trình của đội.
+        </p>
+      </div>
+      <router-link to="/matches" class="btn secondary"
+        ><ClubIcon name="trophy" />Mùa giải & biên bản</router-link
+      >
+    </div>
+    <div class="flex gap-2 border-b border-slate-200 pb-4 mb-6">
+      <button
+        class="btn"
+        :class="{ secondary: tab !== 'matches' }"
+        @click="tab = 'matches'"
+      >
+        <ClubIcon name="calendar" />Lịch trận</button
+      ><button
+        class="btn"
+        :class="{ secondary: tab !== 'users' }"
+        @click="tab = 'users'"
+      >
+        <ClubIcon name="users" />Thành viên
       </button>
     </div>
-
-    <!-- Match Tab -->
-    <div v-if="tab === 'matches'" class="grid gap-6 lg:grid-cols-5">
-      <div class="lg:col-span-2 space-y-6">
-        <div class="glass-panel">
-          <h2 class="mb-6 flex items-center gap-3 border-b border-white/[.08] pb-4 font-display text-xl font-extrabold uppercase tracking-[.08em] text-amber-300">
-            {{ isEditing ? '✏️ Sửa Trận Bóng' : '✨ Tạo Trận Mới' }}
-          </h2>
-          
-          <div class="mb-5" v-if="!isEditing && uniqueLocations.length > 0">
-            <label class="text-xs font-bold uppercase tracking-wide text-blue-300 block mb-2">Sân quen thuộc</label>
-            <select @change="applyFamiliarLocation" class="glass-input">
-              <option value="">-- Click để chọn form sân cũ --</option>
-              <option v-for="(l, i) in uniqueLocations" :key="i" :value="i">{{ l.name }}</option>
-            </select>
-          </div>
-          
-          <div class="space-y-4 mb-6">
-            <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Tên Trận</label><input v-model="match.title" placeholder="VD: Giao hữu ABC" class="glass-input"></div>
-            
-            <div>
-              <label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Sân & Vị trí</label>
-              <div class="flex gap-2 mb-2">
-                <input v-model="match.location_name" placeholder="Tên Sân" class="glass-input flex-1">
-                <button @click="getGPS" class="bg-indigo-600 border border-indigo-400/50 px-4 rounded-lg text-xs font-bold hover:bg-indigo-500 whitespace-nowrap shadow-lg flex items-center gap-1">📍 Lấy GPS</button>
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <input v-model="match.lat" type="number" placeholder="Vĩ độ (Lat)" class="glass-input font-mono text-sm">
-                <input v-model="match.lng" type="number" placeholder="Kinh độ (Lng)" class="glass-input font-mono text-sm">
-              </div>
+    <div v-if="error" class="error-state" role="alert">{{ error }}</div>
+    <div
+      v-if="tab === 'matches'"
+      class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]"
+    >
+      <section class="panel h-fit">
+        <div class="section-head">
+          <h2>{{ match.id ? "Sửa lịch trận" : "Thêm lịch trận" }}</h2>
+          <ClubIcon name="calendar" />
+        </div>
+        <form @submit.prevent="saveMatch" class="stack">
+          <label v-if="locations.length"
+            ><span class="field-label">Dùng lại sân quen</span
+            ><select @change="applyLocation" class="field">
+              <option value="">Chọn sân từ lịch sử</option>
+              <option v-for="(l, i) in locations" :key="i" :value="i">
+                {{ l.location_name }}
+              </option>
+            </select></label
+          >
+          <label
+            ><span class="field-label">Tên trận</span
+            ><input
+              v-model="match.title"
+              class="field"
+              required
+              maxlength="200"
+              placeholder="Ví dụ: Nội bộ A/B thứ bảy"
+          /></label>
+          <label
+            ><span class="field-label">Tên sân</span
+            ><input
+              v-model="match.location_name"
+              class="field"
+              required
+              maxlength="200"
+              placeholder="Tên sân bóng"
+          /></label>
+          <div>
+            <div class="section-head mb-2">
+              <span class="field-label mb-0">Vị trí sân để điểm danh GPS</span
+              ><button
+                type="button"
+                class="btn secondary"
+                @click="getGPS"
+                :disabled="locating"
+              >
+                <ClubIcon name="pin" />{{
+                  locating ? "Đang lấy…" : "Lấy vị trí"
+                }}
+              </button>
             </div>
-            
-            <DateTimeField v-model="match.start_time" id="match-start" label="Bắt đầu trận" tone="green" />
-            <DateTimeField v-model="match.lock_time" id="match-lock" label="Khóa điểm danh · Mốc tính đi muộn" tone="amber" />
-            <DateTimeField v-model="match.end_time" id="match-end" label="Chốt sổ · Kết thúc trận" tone="rose" />
-            <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Bản đồ</label><input v-model="match.map_link" placeholder="Link Google Map" class="glass-input text-sm text-blue-300"></div>
+            <div class="form-row">
+              <label
+                ><span class="field-label">Vĩ độ</span
+                ><input
+                  v-model.number="match.lat"
+                  class="field"
+                  type="number"
+                  step="any"
+                  min="-90"
+                  max="90"
+                  required /></label
+              ><label
+                ><span class="field-label">Kinh độ</span
+                ><input
+                  v-model.number="match.lng"
+                  class="field"
+                  type="number"
+                  step="any"
+                  min="-180"
+                  max="180"
+                  required
+              /></label>
+            </div>
           </div>
-          
+          <DateTimeField
+            v-model="match.start_time"
+            id="match-start"
+            label="Bắt đầu trận (giờ Việt Nam)"
+          />
+          <DateTimeField
+            v-model="match.lock_time"
+            id="match-lock"
+            label="Mốc tính đi muộn (giờ Việt Nam)"
+            tone="amber"
+          />
+          <DateTimeField
+            v-model="match.end_time"
+            id="match-end"
+            label="Kết thúc buổi đá (giờ Việt Nam)"
+            tone="rose"
+          />
+          <label
+            ><span class="field-label">Bản đồ sân (tùy chọn)</span
+            ><input
+              v-model="match.map_link"
+              class="field"
+              type="url"
+              placeholder="https://maps.google.com/…"
+          /></label>
+          <p class="hint">
+            Có thể nhập trận đã qua để bổ sung lịch sử. Thứ tự: bắt đầu, mốc
+            tính muộn, kết thúc.
+          </p>
           <div class="flex gap-3">
-            <button @click="saveMatch" class="glass-btn !bg-gradient-to-r !from-green-600 !to-emerald-500 border-green-400/50 flex-1">{{ isEditing ? 'Lưu Thay Đổi' : 'Tạo Trận Này' }}</button>
-            <button v-if="isEditing" @click="resetMatchForm" class="bg-gray-700 border border-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 transition-colors">Hủy</button>
+            <button class="btn" :disabled="saving">
+              {{
+                saving
+                  ? "Đang lưu…"
+                  : match.id
+                    ? "Lưu lịch trận"
+                    : "Tạo lịch trận"
+              }}</button
+            ><button
+              v-if="match.id"
+              type="button"
+              class="btn secondary"
+              @click="resetMatch"
+            >
+              Hủy sửa
+            </button>
           </div>
+        </form>
+      </section>
+      <section class="panel">
+        <div class="section-head">
+          <h2>Lịch trận & hồ sơ tham gia</h2>
+          <span class="badge">{{ allMatches.length }} trận</span>
         </div>
-      </div>
-
-      <div class="lg:col-span-3">
-        <div class="glass-panel h-full">
-          <h2 class="mb-6 flex items-center gap-3 border-b border-white/[.08] pb-4 font-display text-xl font-extrabold uppercase tracking-[.08em] text-sky-200">
-            📋 Toàn bộ Trận Đấu
-          </h2>
-          <div class="space-y-3 max-h-[700px] overflow-y-auto pr-2">
-            <div v-for="m in allMatches" :key="m.id" class="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col sm:flex-row justify-between sm:items-center gap-4 hover:bg-white/10 transition-colors">
+        <label
+          ><span class="field-label">Tìm trận</span
+          ><input
+            v-model="matchSearch"
+            class="field"
+            type="search"
+            placeholder="Tên trận hoặc sân…"
+        /></label>
+        <div class="mt-4 max-h-[1100px] overflow-y-auto">
+          <article
+            v-for="m in filteredMatches"
+            :key="m.id"
+            class="border-b border-slate-200 py-5"
+          >
+            <div class="flex justify-between items-start gap-3">
               <div>
-                <p class="font-black text-lg text-white mb-1">{{ m.title }}</p>
-                <p class="text-sm font-mono text-blue-300 mb-1">{{ formatVietnamDateTime(m.start_time) }}</p>
-                <div class="mt-2 space-y-1 text-[11px] text-slate-400"><p>📍 {{ m.location_name }}</p><p class="text-amber-300/80">Khóa điểm danh: {{ formatVietnamDateTime(m.lock_time) }}</p><p class="text-rose-300/80">Chốt sổ: {{ formatVietnamDateTime(m.end_time) }}</p></div>
+                <h3 class="font-semibold text-base mb-1">{{ m.title }}</h3>
+                <p class="text-xs muted mb-1">
+                  {{ formatVietnamDateTime(m.start_time) }}
+                </p>
+                <p class="text-xs muted mb-0">{{ m.location_name }}</p>
               </div>
-              <div class="flex flex-wrap gap-2">
-                <button v-if="isMatchActive(m.end_time)" @click="editMatch(m)" class="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-4 py-2 rounded-lg text-xs font-bold hover:bg-yellow-500/30 transition">Sửa</button>
-                <button v-if="isMatchActive(m.end_time)" @click="stopMatch(m.id)" class="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-4 py-2 rounded-lg text-xs font-bold hover:bg-orange-500/30 transition">Đóng Sổ</button>
-                <button @click="deleteMatch(m.id)" class="bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-500/30 transition">Xóa</button>
-              </div>
+              <span
+                class="badge"
+                :class="new Date(m.end_time) > new Date() ? 'blue' : ''"
+                >{{
+                  new Date(m.end_time) > new Date() ? "Đang mở" : "Đã qua"
+                }}</span
+              >
             </div>
-            <div v-if="allMatches.length === 0" class="text-center p-8 text-gray-500 italic">Chưa có trận đấu nào.</div>
-          </div>
+            <div class="flex flex-wrap gap-2 mt-4">
+              <router-link :to="`/matches/${m.id}`" class="btn"
+                ><ClubIcon name="users" />Chi tiết & biên bản</router-link
+              ><button class="btn secondary" @click="editMatch(m)">
+                Sửa lịch</button
+              ><button
+                v-if="
+                  new Date(m.end_time) > new Date() &&
+                  new Date(m.lock_time) < new Date()
+                "
+                class="btn secondary"
+                @click="closeMatch(m)"
+                :disabled="saving"
+              >
+                Đóng điểm danh</button
+              ><button
+                class="btn danger"
+                @click="deleteMatch(m)"
+                :disabled="saving"
+              >
+                Xóa lịch
+              </button>
+            </div>
+          </article>
+          <p v-if="!filteredMatches.length" class="hint py-8">
+            Chưa có trận phù hợp. Thêm lịch trận bằng biểu mẫu bên cạnh.
+          </p>
         </div>
-      </div>
+        <p class="hint mt-4">
+          Trận đã có điểm danh hoặc biên bản được giữ lại để tra cứu; dùng trạng
+          thái “Hủy trận” trong biên bản khi cần.
+        </p>
+      </section>
     </div>
-
-    <!-- Users Tab -->
-    <div v-if="tab === 'users'" class="space-y-6">
-      <div class="glass-panel">
-        <h2 class="mb-6 flex items-center gap-3 border-b border-white/[.08] pb-4 font-display text-xl font-extrabold uppercase tracking-[.08em] text-amber-300">
-          ✨ Cấp Tài Khoản Cầu Thủ
-        </h2>
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-4 md:items-end">
-          <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Username</label><input v-model="newUser.username" placeholder="vd: luong123" class="glass-input"></div>
-          <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Mật khẩu</label><input v-model="newUser.password" placeholder="••••••••" class="glass-input"></div>
-          <div><label class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1 block">Họ & Tên</label><input v-model="newUser.name" placeholder="Tên hiển thị" class="glass-input"></div>
-          <button @click="createUser" class="glass-btn !bg-gradient-to-r !from-green-600 !to-emerald-500 h-[50px]">Tạo Mới</button>
+    <div v-else class="stack">
+      <section class="panel">
+        <div class="section-head">
+          <h2>Thêm thành viên</h2>
+          <ClubIcon name="users" />
         </div>
-      </div>
-
-      <div class="table-shell overflow-x-auto p-0 rounded-2xl">
-        <table class="w-full text-left text-sm whitespace-nowrap">
-          <thead class="bg-black/40">
+        <form
+          @submit.prevent="createUser"
+          class="grid gap-4 md:grid-cols-4 items-end"
+        >
+          <label
+            ><span class="field-label">Tài khoản</span
+            ><input
+              v-model="newUser.username"
+              class="field"
+              required
+              maxlength="100"
+              autocomplete="off" /></label
+          ><label
+            ><span class="field-label">Mật khẩu ban đầu</span
+            ><input
+              v-model="newUser.password"
+              class="field"
+              type="password"
+              minlength="6"
+              required
+              autocomplete="new-password" /></label
+          ><label
+            ><span class="field-label">Họ và tên</span
+            ><input
+              v-model="newUser.name"
+              class="field"
+              required
+              maxlength="150" /></label
+          ><button class="btn" :disabled="saving">Tạo thành viên</button>
+        </form>
+      </section>
+      <label class="block max-w-md"
+        ><span class="field-label">Tìm thành viên</span
+        ><input
+          v-model="userSearch"
+          class="field"
+          type="search"
+          placeholder="Tên hoặc tài khoản…"
+      /></label>
+      <div class="table-shell">
+        <table class="data-table">
+          <thead>
             <tr>
-              <th class="p-4 font-bold text-blue-300 uppercase tracking-wider">Tài khoản</th>
-              <th class="p-4 font-bold text-blue-300 uppercase tracking-wider">Tên hiển thị</th>
-              <th class="p-4 font-bold text-blue-300 uppercase tracking-wider">Chức vụ</th>
-              <th class="p-4 font-bold text-blue-300 uppercase tracking-wider text-right">Điều khiển</th>
+              <th>Tài khoản</th>
+              <th>Thành viên</th>
+              <th>Quyền truy cập</th>
+              <th>Thao tác</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="u in users" :key="u.id" class="border-t border-white/5 hover:bg-white/5 transition-colors">
-              <td class="p-4 font-mono font-bold text-gray-300">{{ u.username }}</td>
-              <td class="p-4 font-semibold text-white">{{ u.name }}</td>
-              <td class="p-4">
-                <select v-model="u.role" @change="saveUserRole(u)" class="bg-[#0f172a] text-xs p-2 rounded-lg border border-white/20 text-white font-bold outline-none focus:border-blue-400" :disabled="u.username === 'admin'">
-                  <option value="user">USER (Cầu thủ)</option>
-                  <option value="admin">ADMIN (Quản lý)</option>
+            <tr v-for="u in filteredUsers" :key="u.id">
+              <td>{{ u.username }}</td>
+              <td class="font-semibold">{{ u.name }}</td>
+              <td>
+                <select
+                  :value="u.role"
+                  @change="saveRole(u, $event.target.value)"
+                  class="field"
+                  :aria-label="`Quyền của ${u.name}`"
+                  :disabled="
+                    u.id === currentUser.id || u.username === 'admin' || saving
+                  "
+                >
+                  <option value="user">Cầu thủ</option>
+                  <option value="admin">Quản trị viên</option>
                 </select>
               </td>
-              <td class="p-4 flex gap-2 justify-end">
-                <router-link :to="'/profile/'+u.id" class="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-500/30 transition">Hồ Sơ</router-link>
-                <button @click="resetPass(u.id)" class="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1.5 rounded text-xs font-bold hover:bg-yellow-500/30 transition">Reset MK</button>
-                <button @click="deleteUser(u.id)" v-if="u.username !== 'admin'" class="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 rounded text-xs font-bold hover:bg-red-500/30 transition">Xóa</button>
+              <td>
+                <div class="flex gap-2">
+                  <router-link :to="`/profile/${u.id}`" class="btn secondary"
+                    >Hồ sơ</router-link
+                  ><button
+                    class="btn secondary"
+                    @click="resetPass(u)"
+                    :disabled="saving"
+                  >
+                    Đổi mật khẩu</button
+                  ><button
+                    v-if="u.username !== 'admin' && u.id !== currentUser.id"
+                    class="btn danger"
+                    @click="deleteUser(u)"
+                    :disabled="saving"
+                  >
+                    Xóa
+                  </button>
+                </div>
               </td>
+            </tr>
+            <tr v-if="!filteredUsers.length">
+              <td colspan="4" class="muted">Không có thành viên phù hợp.</td>
             </tr>
           </tbody>
         </table>
@@ -124,73 +323,188 @@
     </div>
   </div>
 </template>
-
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import axios from 'axios';
-import { useToast } from '../composables/useToast';
-import { useDialog } from '../composables/useDialog';
-import DateTimeField from '../components/DateTimeField.vue';
-import { formatVietnamDateTime, toVietnamInput } from '../utils/datetime';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const { addToast } = useToast();
-const { openConfirm, openPrompt } = useDialog();
-const tab = ref('matches');
-const allMatches = ref([]);
-const users = ref([]);
-const isEditing = ref(false);
-
-const match = ref({ id: null, title: '', location_name: '', lat: '', lng: '', map_link: '', start_time: '', lock_time: '', end_time: '' });
-const newUser = ref({ username: '', password: '', name: '' });
-
-const loadAdminData = async () => {
+import { ref, computed, onMounted } from "vue";
+import api from "../api";
+import ClubIcon from "../components/ClubIcon.vue";
+import DateTimeField from "../components/DateTimeField.vue";
+import { formatVietnamDateTime, toVietnamInput } from "../utils/datetime";
+import { useToast } from "../composables/useToast";
+import { useDialog } from "../composables/useDialog";
+const { addToast } = useToast(),
+  { openConfirm, openPrompt } = useDialog(),
+  currentUser = JSON.parse(localStorage.getItem("fcdbb_user") || "{}");
+const tab = ref("matches"),
+  allMatches = ref([]),
+  users = ref([]),
+  error = ref(""),
+  saving = ref(false),
+  locating = ref(false),
+  matchSearch = ref(""),
+  userSearch = ref("");
+const emptyMatch = () => ({
+    title: "",
+    location_name: "",
+    lat: "",
+    lng: "",
+    map_link: "",
+    start_time: "",
+    lock_time: "",
+    end_time: "",
+  }),
+  match = ref(emptyMatch()),
+  newUser = ref({ username: "", password: "", name: "" });
+const load = async () => {
   try {
-    const [resM, resU] = await Promise.all([axios.get(`${API}/matches`), axios.get(`${API}/users`)]);
-    allMatches.value = resM.data || [];
-    users.value = resU.data || [];
-  } catch(e) { console.error("Lỗi load admin data:", e); }
+    const [m, u] = await Promise.all([api.get("/matches"), api.get("/users")]);
+    allMatches.value = m.data;
+    users.value = u.data;
+  } catch (e) {
+    error.value =
+      e.response?.data?.message || "Không tải được dữ liệu quản trị.";
+  }
 };
-onMounted(loadAdminData);
-
-const uniqueLocations = computed(() => {
-  const locs = []; const map = new Map();
-  if (!allMatches.value || !Array.isArray(allMatches.value)) return locs;
-  allMatches.value.forEach(m => {
-    if(!map.has(m.location_name)) { map.set(m.location_name, true); locs.push({ name: m.location_name, lat: m.lat, lng: m.lng, map_link: m.map_link }); }
+const locations = computed(() => [
+  ...new Map(allMatches.value.map((m) => [m.location_name, m])).values(),
+]);
+const filteredMatches = computed(() =>
+  allMatches.value.filter((m) =>
+    `${m.title} ${m.location_name}`
+      .toLocaleLowerCase("vi")
+      .includes(matchSearch.value.toLocaleLowerCase("vi")),
+  ),
+);
+const filteredUsers = computed(() =>
+  users.value.filter((u) =>
+    `${u.name} ${u.username}`
+      .toLocaleLowerCase("vi")
+      .includes(userSearch.value.toLocaleLowerCase("vi")),
+  ),
+);
+const run = async (action, message) => {
+  saving.value = true;
+  error.value = "";
+  try {
+    await action();
+    await load();
+    addToast(message, "success");
+  } catch (e) {
+    error.value =
+      e.response?.data?.message ||
+      "Không thực hiện được thao tác. Kiểm tra dữ liệu và thử lại.";
+    addToast(error.value, "error");
+  } finally {
+    saving.value = false;
+  }
+};
+const applyLocation = (e) => {
+  if (e.target.value === "") return;
+  const l = locations.value[Number(e.target.value)];
+  Object.assign(match.value, {
+    location_name: l.location_name,
+    lat: l.lat,
+    lng: l.lng,
+    map_link: l.map_link,
   });
-  return locs;
-});
-const applyFamiliarLocation = (e) => {
-  if(e.target.value === '') return;
-  const l = uniqueLocations.value[e.target.value];
-  match.value.location_name = l.name; match.value.lat = l.lat; match.value.lng = l.lng; match.value.map_link = l.map_link;
 };
-
-const getGPS = () => navigator.geolocation.getCurrentPosition(pos => { match.value.lat = pos.coords.latitude; match.value.lng = pos.coords.longitude; }, () => addToast('Lỗi lấy GPS! Hãy kiểm tra cài đặt vị trí.', 'error'));
-const isMatchActive = (endTime) => new Date(endTime) > new Date();
-
-const saveMatch = async () => {
-  try {
-    if (isEditing.value) await axios.put(`${API}/matches/${match.value.id}`, match.value);
-    else await axios.post(`${API}/matches`, match.value);
-    addToast('Lưu trận thành công!', 'success'); resetMatchForm(); loadAdminData();
-  } catch(e) {
-    const message = e.response?.data?.message;
-    addToast(Array.isArray(message) ? message.join(', ') : (message || 'Lỗi lưu trận!'), 'error');
-  }
+const getGPS = () => {
+  if (!navigator.geolocation)
+    return addToast("Trình duyệt không hỗ trợ định vị.", "warning");
+  locating.value = true;
+  navigator.geolocation.getCurrentPosition(
+    (p) => {
+      match.value.lat = p.coords.latitude;
+      match.value.lng = p.coords.longitude;
+      locating.value = false;
+    },
+    () => {
+      locating.value = false;
+      addToast(
+        "Bật định vị và cho phép truy cập vị trí để lấy tọa độ sân.",
+        "error",
+      );
+    },
+    { enableHighAccuracy: true, timeout: 15000 },
+  );
 };
-const editMatch = (m) => { match.value = { ...m, start_time: toVietnamInput(m.start_time), lock_time: toVietnamInput(m.lock_time), end_time: toVietnamInput(m.end_time) }; isEditing.value = true; };
-const stopMatch = async (id) => {
-  if (await openConfirm('Đóng sổ điểm danh trận này ngay lập tức?', { title: 'Đóng sổ điểm danh?', tone: 'warning', confirmText: 'Đóng sổ' })) {
-    const now = new Date(); await axios.put(`${API}/matches/${id}`, { end_time: now.toISOString() }); loadAdminData(); addToast('Đã đóng sổ điểm danh.', 'success');
-  }
+const resetMatch = () => {
+  match.value = emptyMatch();
 };
-const deleteMatch = async (id) => { if (await openConfirm('Xóa vĩnh viễn trận này và mọi dữ liệu điểm danh?', { title: 'Xóa trận đấu?', tone: 'danger', confirmText: 'Xóa vĩnh viễn' })) { await axios.delete(`${API}/matches/${id}`); loadAdminData(); addToast('Đã xóa trận đấu.', 'success'); } };
-const resetMatchForm = () => { match.value = { id: null, title: '', location_name: '', lat: '', lng: '', map_link: '', start_time: '', lock_time: '', end_time: '' }; isEditing.value = false; };
-
-const createUser = async () => { await axios.post(`${API}/users`, newUser.value); newUser.value = { username: '', password: '', name: '' }; loadAdminData(); addToast('Tạo tài khoản thành công!', 'success'); };
-const saveUserRole = async (u) => { await axios.put(`${API}/users/${u.id}`, { role: u.role }); addToast('Cập nhật quyền thành công!', 'success'); };
-const resetPass = async (id) => { const np = await openPrompt('Nhập mật khẩu mới cho tài khoản này.', { title: 'Reset mật khẩu', placeholder: 'Mật khẩu mới', inputType: 'password', confirmText: 'Cập nhật', tone: 'info' }); if (np) { await axios.put(`${API}/users/${id}/reset-password`, { password: np }); addToast('Đã reset mật khẩu!', 'success'); } };
-const deleteUser = async (id) => { if (await openConfirm('Xóa vĩnh viễn cầu thủ này?', { title: 'Xóa cầu thủ?', tone: 'danger', confirmText: 'Xóa cầu thủ' })) { await axios.delete(`${API}/users/${id}`); loadAdminData(); addToast('Đã xóa cầu thủ.', 'success'); } };
+const saveMatch = () =>
+  run(async () => {
+    if (match.value.id)
+      await api.put(`/matches/${match.value.id}`, match.value);
+    else await api.post("/matches", match.value);
+    resetMatch();
+  }, "Đã lưu lịch trận.");
+const editMatch = (m) => {
+  match.value = {
+    ...m,
+    start_time: toVietnamInput(m.start_time),
+    lock_time: toVietnamInput(m.lock_time),
+    end_time: toVietnamInput(m.end_time),
+  };
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+const closeMatch = async (m) => {
+  if (
+    await openConfirm("Kết thúc điểm danh buổi đá này ngay bây giờ?", {
+      title: "Đóng điểm danh?",
+      confirmText: "Đóng điểm danh",
+    })
+  )
+    run(
+      () => api.put(`/matches/${m.id}`, { end_time: new Date().toISOString() }),
+      "Đã đóng điểm danh.",
+    );
+};
+const deleteMatch = async (m) => {
+  if (
+    await openConfirm(
+      "Chỉ lịch trận chưa có dữ liệu mới có thể xóa. Lịch sử thao tác vẫn được lưu.",
+      {
+        title: `Xóa lịch “${m.title}”?`,
+        confirmText: "Xóa lịch",
+        tone: "danger",
+      },
+    )
+  )
+    run(() => api.delete(`/matches/${m.id}`), "Đã xóa lịch trận.");
+};
+const createUser = () =>
+  run(async () => {
+    await api.post("/users", newUser.value);
+    newUser.value = { username: "", password: "", name: "" };
+  }, "Đã tạo thành viên.");
+const saveRole = (u, role) =>
+  run(() => api.put(`/users/${u.id}`, { role }), "Đã cập nhật quyền truy cập.");
+const resetPass = async (u) => {
+  const password = await openPrompt(
+    `Nhập mật khẩu mới cho ${u.name} (ít nhất 6 ký tự).`,
+    {
+      title: "Đặt lại mật khẩu",
+      inputType: "password",
+      confirmText: "Lưu mật khẩu",
+    },
+  );
+  if (password)
+    run(
+      () => api.put(`/users/${u.id}/reset-password`, { password }),
+      "Đã đặt lại mật khẩu.",
+    );
+};
+const deleteUser = async (u) => {
+  if (
+    await openConfirm(
+      `Xóa tài khoản ${u.name}? Biên bản đã lưu vẫn giữ tên cầu thủ. Thành viên có điểm danh được bảo lưu.`,
+      {
+        title: "Xóa thành viên?",
+        confirmText: "Xóa thành viên",
+        tone: "danger",
+      },
+    )
+  )
+    run(() => api.delete(`/users/${u.id}`), "Đã xóa thành viên.");
+};
+onMounted(load);
 </script>

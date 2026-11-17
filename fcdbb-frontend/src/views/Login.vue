@@ -1,75 +1,103 @@
 <template>
-  <div class="grid min-h-[calc(100vh-8rem)] items-center gap-8 py-4 lg:grid-cols-[1.05fr_.95fr] lg:gap-16 lg:py-10">
-    <section class="block text-center lg:text-left">
-      <p class="eyebrow mb-3 lg:mb-5">FC ĐÁ BAY BÓNG · SEASON 2026</p>
-      <h1 class="mx-auto max-w-xl font-display text-4xl font-extrabold leading-[1.04] tracking-[-.065em] text-white sm:text-5xl lg:mx-0 lg:text-6xl xl:text-7xl">Bản lĩnh trên sân.<br><span class="text-amber-300">Kỷ luật ngoài sân.</span></h1>
-      <p class="mx-auto mt-4 max-w-lg text-sm leading-6 text-slate-400 sm:text-base lg:mx-0 lg:mt-7 lg:leading-7">Nơi mọi trận đấu, mọi thành viên và mọi khoảnh khắc của đội bóng được kết nối trong một không gian vận hành rõ ràng.</p>
-      <div class="mt-10 hidden gap-3 lg:flex">
-        <div class="stat-card min-w-32"><p class="stat-label">Mục tiêu</p><p class="stat-value">01</p><p class="mt-1 text-xs text-slate-400">Một tập thể</p></div>
-        <div class="stat-card min-w-32"><p class="stat-label">Tinh thần</p><p class="stat-value">100%</p><p class="mt-1 text-xs text-slate-400">Không bỏ cuộc</p></div>
+  <div
+    class="mx-auto grid min-h-[calc(100vh-140px)] max-w-5xl items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-20"
+  >
+    <section>
+      <router-link to="/login" class="brand mb-10"
+        ><span class="brand-mark">ĐB</span
+        ><span
+          ><span class="brand-wordmark">FC Đá Bay Bóng</span
+          ><span class="brand-subtitle"
+            >Không gian dành riêng cho đội bóng</span
+          ></span
+        ></router-link
+      >
+      <div class="pitch">
+        <div class="pitch-lines"></div>
+        <div class="pitch-content">
+          <div class="scoreboard">
+            <div class="scoreboard-team">
+              <span class="team-chip">A</span>Đội A
+            </div>
+            <span class="score-large">vs</span>
+            <div class="scoreboard-team">
+              <span class="team-chip b">B</span>Đội B
+            </div>
+          </div>
+          <h1 class="text-3xl font-bold tracking-tight leading-snug mb-4">
+            Cùng một đội.<br />Cùng một hành trình.
+          </h1>
+          <p class="muted text-sm leading-7 mb-0">
+            Từ buổi đá đầu tuần đến cuộc đua cả mùa giải. Lịch đấu, đội hình và
+            những dấu ấn trên sân, được giữ lại ở một nơi.
+          </p>
+        </div>
       </div>
     </section>
-
-    <section class="glass-panel relative mx-auto w-full max-w-md overflow-hidden p-6 sm:p-9">
-      <div class="absolute -right-20 -top-20 h-48 w-48 rounded-full bg-sky-400/10 blur-3xl"></div>
-      <div class="absolute -bottom-24 -left-20 h-52 w-52 rounded-full bg-amber-300/10 blur-3xl"></div>
-      <div class="relative z-10">
-        <div class="mb-7 flex items-center gap-4 sm:hidden"><span class="brand-mark">⚽</span><div><p class="brand-wordmark">FC Đá Bay Bóng</p><p class="brand-subtitle">Football club OS</p></div></div>
-        <p class="section-eyebrow mb-2">KHU VỰC THÀNH VIÊN</p>
-        <h2 class="font-display text-3xl font-extrabold tracking-[-.04em] text-white">Chào mừng trở lại.</h2>
-        <p class="mt-2 text-sm leading-6 text-slate-400">Đăng nhập để cập nhật đội hình, điểm danh và theo dõi hoạt động của FC.</p>
-        <div class="mt-8 space-y-5">
-          <div>
-            <label class="mb-2 block text-[10px] font-extrabold uppercase tracking-[.18em] text-sky-300">Tài khoản</label>
-            <input v-model="username" type="text" class="glass-input" placeholder="Nhập username" @keyup.enter="login">
-          </div>
-          <div>
-            <label class="mb-2 block text-[10px] font-extrabold uppercase tracking-[.18em] text-sky-300">Mật khẩu</label>
-            <input v-model="password" type="password" class="glass-input" placeholder="Nhập mật khẩu" @keyup.enter="login">
-          </div>
-          <button @click="login" class="glass-btn btn-gold mt-7">Vào sân <span class="text-lg">→</span></button>
-        </div>
-        <div class="mt-7 flex items-center gap-3 text-[10px] uppercase tracking-[.16em] text-slate-500"><span class="h-px flex-1 bg-white/10"></span><span>FCDBB access</span><span class="h-px flex-1 bg-white/10"></span></div>
-      </div>
+    <section class="panel !p-7 sm:!p-9">
+      <h2 class="text-2xl font-bold mb-2 tracking-tight">Chào mừng trở lại.</h2>
+      <p class="muted text-sm mb-7">
+        Đăng nhập để cập nhật hoạt động đội bóng.
+      </p>
+      <form @submit.prevent="login" class="stack">
+        <label
+          ><span class="field-label">Tài khoản</span
+          ><input
+            v-model="username"
+            required
+            class="field"
+            autocomplete="username"
+            placeholder="Tài khoản thành viên" /></label
+        ><label
+          ><span class="field-label">Mật khẩu</span
+          ><input
+            v-model="password"
+            required
+            type="password"
+            class="field"
+            autocomplete="current-password"
+            placeholder="Mật khẩu của bạn"
+        /></label>
+        <p v-if="error" class="error-state mb-0" role="alert">{{ error }}</p>
+        <button class="btn w-full" :disabled="loading">
+          {{ loading ? "Đang đăng nhập…" : "Đăng nhập"
+          }}<ClubIcon name="arrow" />
+        </button>
+      </form>
+      <p class="hint mt-6">
+        Chưa có tài khoản? Liên hệ quản trị viên đội bóng để được cấp quyền truy
+        cập.
+      </p>
     </section>
   </div>
 </template>
-
 <script setup>
-import { ref } from 'vue';
-import axios from 'axios';
-import { useRouter } from 'vue-router';
-import { useToast } from '../composables/useToast';
-
-const router = useRouter();
-const { addToast } = useToast();
-const username = ref('');
-const password = ref('');
-// Lấy biến môi trường Vercel (Nếu rỗng nó sẽ tự fallback về localhost để tránh lỗi)
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import api from "../api";
+import ClubIcon from "../components/ClubIcon.vue";
+const router = useRouter(),
+  username = ref(""),
+  password = ref(""),
+  error = ref(""),
+  loading = ref(false);
 const login = async () => {
-  if (!username.value || !password.value) {
-    return addToast('Vui lòng nhập đủ tài khoản và mật khẩu!', 'warning');
-  }
-  
-  console.log("🔗 Đang kết nối tới Backend tại:", API); // Dòng này để bạn check F12 xem link đúng chưa
-
+  loading.value = true;
+  error.value = "";
   try {
-    const res = await axios.post(`${API}/auth/login`, {
+    const { data } = await api.post("/auth/login", {
       username: username.value,
-      password: password.value
+      password: password.value,
     });
-    
-    localStorage.setItem('fcdbb_token', res.data.token);
-    localStorage.setItem('fcdbb_user', JSON.stringify(res.data.user));
-    
-    // Ép reload lại trang để hệ thống nhận diện quyền Admin/User ngay lập tức
-    window.location.href = '/'; 
-    
-  } catch (err) {
-    console.error("🚨 Lỗi đăng nhập toàn tập:", err);
-    addToast(err.response?.data?.message || 'Không thể kết nối tới Server. Hãy kiểm tra F12 (Console)!', 'error');
+    localStorage.setItem("fcdbb_token", data.token);
+    localStorage.setItem("fcdbb_user", JSON.stringify(data.user));
+    await router.push("/");
+  } catch (e) {
+    error.value =
+      e.response?.data?.message ||
+      "Không kết nối được máy chủ. Vui lòng thử lại.";
+  } finally {
+    loading.value = false;
   }
 };
 </script>
