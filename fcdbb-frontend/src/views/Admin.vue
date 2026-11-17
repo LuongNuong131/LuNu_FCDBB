@@ -11,16 +11,18 @@
         ><ClubIcon name="trophy" />Mùa giải & biên bản</router-link
       >
     </div>
-    <div class="flex gap-2 border-b border-slate-200 pb-4 mb-6">
+    <div class="admin-tabs" role="group" aria-label="Khu vực quản trị">
       <button
         class="btn"
         :class="{ secondary: tab !== 'matches' }"
+        :aria-pressed="tab === 'matches'"
         @click="tab = 'matches'"
       >
         <ClubIcon name="calendar" />Lịch trận</button
       ><button
         class="btn"
         :class="{ secondary: tab !== 'users' }"
+        :aria-pressed="tab === 'users'"
         @click="tab = 'users'"
       >
         <ClubIcon name="users" />Thành viên
@@ -31,127 +33,142 @@
       v-if="tab === 'matches'"
       class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]"
     >
-      <section class="panel h-fit">
-        <div class="section-head">
-          <h2>{{ match.id ? "Sửa lịch trận" : "Thêm lịch trận" }}</h2>
-          <ClubIcon name="calendar" />
-        </div>
-        <form @submit.prevent="saveMatch" class="stack">
-          <label v-if="locations.length"
-            ><span class="field-label">Dùng lại sân quen</span
-            ><select @change="applyLocation" class="field">
-              <option value="">Chọn sân từ lịch sử</option>
-              <option v-for="(l, i) in locations" :key="i" :value="i">
-                {{ l.location_name }}
-              </option>
-            </select></label
-          >
-          <label
-            ><span class="field-label">Tên trận</span
-            ><input
-              v-model="match.title"
-              class="field"
-              required
-              maxlength="200"
-              placeholder="Ví dụ: Nội bộ A/B thứ bảy"
-          /></label>
-          <label
-            ><span class="field-label">Tên sân</span
-            ><input
-              v-model="match.location_name"
-              class="field"
-              required
-              maxlength="200"
-              placeholder="Tên sân bóng"
-          /></label>
-          <div>
-            <div class="section-head mb-2">
-              <span class="field-label mb-0">Vị trí sân để điểm danh GPS</span
+      <section class="panel h-fit admin-match-form">
+        <button
+          type="button"
+          class="disclosure-heading"
+          :aria-expanded="matchFormOpen"
+          aria-controls="schedule-form"
+          @click="matchFormOpen = !matchFormOpen"
+        >
+          <span
+            ><ClubIcon name="plus" /><span>{{
+              match.id ? "Sửa lịch trận" : "Thêm lịch trận"
+            }}</span></span
+          ><ClubIcon name="chevron" :class="{ 'rotate-180': matchFormOpen }" />
+        </button>
+        <div
+          id="schedule-form"
+          class="admin-form-body"
+          :class="{ 'is-open': matchFormOpen }"
+        >
+          <form @submit.prevent="saveMatch" class="stack">
+            <label v-if="locations.length"
+              ><span class="field-label">Dùng lại sân quen</span
+              ><select @change="applyLocation" class="field">
+                <option value="">Chọn sân từ lịch sử</option>
+                <option v-for="(l, i) in locations" :key="i" :value="i">
+                  {{ l.location_name }}
+                </option>
+              </select></label
+            >
+            <label
+              ><span class="field-label">Tên trận</span
+              ><input
+                v-model="match.title"
+                class="field"
+                required
+                maxlength="200"
+                placeholder="Ví dụ: Nội bộ A/B thứ bảy"
+            /></label>
+            <label
+              ><span class="field-label">Tên sân</span
+              ><input
+                v-model="match.location_name"
+                class="field"
+                required
+                maxlength="200"
+                placeholder="Tên sân bóng"
+            /></label>
+            <div>
+              <div class="section-head mb-2">
+                <span class="field-label mb-0">Vị trí sân để điểm danh GPS</span
+                ><button
+                  type="button"
+                  class="btn secondary"
+                  @click="getGPS"
+                  :disabled="locating"
+                >
+                  <ClubIcon name="pin" />{{
+                    locating ? "Đang lấy…" : "Lấy vị trí"
+                  }}
+                </button>
+              </div>
+              <div class="form-row">
+                <label
+                  ><span class="field-label">Vĩ độ</span
+                  ><input
+                    v-model.number="match.lat"
+                    class="field"
+                    type="number"
+                    step="any"
+                    min="-90"
+                    max="90"
+                    required /></label
+                ><label
+                  ><span class="field-label">Kinh độ</span
+                  ><input
+                    v-model.number="match.lng"
+                    class="field"
+                    type="number"
+                    step="any"
+                    min="-180"
+                    max="180"
+                    required
+                /></label>
+              </div>
+            </div>
+            <DateTimeField
+              v-model="match.start_time"
+              id="match-start"
+              label="Bắt đầu trận (giờ Việt Nam)"
+            />
+            <DateTimeField
+              v-model="match.lock_time"
+              id="match-lock"
+              label="Mốc tính đi muộn (giờ Việt Nam)"
+              tone="amber"
+            />
+            <DateTimeField
+              v-model="match.end_time"
+              id="match-end"
+              label="Kết thúc buổi đá (giờ Việt Nam)"
+              tone="rose"
+            />
+            <label
+              ><span class="field-label">Bản đồ sân (tùy chọn)</span
+              ><input
+                v-model="match.map_link"
+                class="field"
+                type="url"
+                placeholder="https://maps.google.com/…"
+            /></label>
+            <p class="hint">
+              Có thể nhập trận đã qua để bổ sung lịch sử. Thứ tự: bắt đầu, mốc
+              tính muộn, kết thúc.
+            </p>
+            <div class="flex gap-3">
+              <button class="btn" :disabled="saving">
+                {{
+                  saving
+                    ? "Đang lưu…"
+                    : match.id
+                      ? "Lưu lịch trận"
+                      : "Tạo lịch trận"
+                }}</button
               ><button
+                v-if="match.id"
                 type="button"
                 class="btn secondary"
-                @click="getGPS"
-                :disabled="locating"
+                @click="resetMatch"
               >
-                <ClubIcon name="pin" />{{
-                  locating ? "Đang lấy…" : "Lấy vị trí"
-                }}
+                Hủy sửa
               </button>
             </div>
-            <div class="form-row">
-              <label
-                ><span class="field-label">Vĩ độ</span
-                ><input
-                  v-model.number="match.lat"
-                  class="field"
-                  type="number"
-                  step="any"
-                  min="-90"
-                  max="90"
-                  required /></label
-              ><label
-                ><span class="field-label">Kinh độ</span
-                ><input
-                  v-model.number="match.lng"
-                  class="field"
-                  type="number"
-                  step="any"
-                  min="-180"
-                  max="180"
-                  required
-              /></label>
-            </div>
-          </div>
-          <DateTimeField
-            v-model="match.start_time"
-            id="match-start"
-            label="Bắt đầu trận (giờ Việt Nam)"
-          />
-          <DateTimeField
-            v-model="match.lock_time"
-            id="match-lock"
-            label="Mốc tính đi muộn (giờ Việt Nam)"
-            tone="amber"
-          />
-          <DateTimeField
-            v-model="match.end_time"
-            id="match-end"
-            label="Kết thúc buổi đá (giờ Việt Nam)"
-            tone="rose"
-          />
-          <label
-            ><span class="field-label">Bản đồ sân (tùy chọn)</span
-            ><input
-              v-model="match.map_link"
-              class="field"
-              type="url"
-              placeholder="https://maps.google.com/…"
-          /></label>
-          <p class="hint">
-            Có thể nhập trận đã qua để bổ sung lịch sử. Thứ tự: bắt đầu, mốc
-            tính muộn, kết thúc.
-          </p>
-          <div class="flex gap-3">
-            <button class="btn" :disabled="saving">
-              {{
-                saving
-                  ? "Đang lưu…"
-                  : match.id
-                    ? "Lưu lịch trận"
-                    : "Tạo lịch trận"
-              }}</button
-            ><button
-              v-if="match.id"
-              type="button"
-              class="btn secondary"
-              @click="resetMatch"
-            >
-              Hủy sửa
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </section>
-      <section class="panel">
+      <section class="panel admin-match-list">
         <div class="section-head">
           <h2>Lịch trận & hồ sơ tham gia</h2>
           <span class="badge">{{ allMatches.length }} trận</span>
@@ -164,7 +181,7 @@
             type="search"
             placeholder="Tên trận hoặc sân…"
         /></label>
-        <div class="mt-4 max-h-[1100px] overflow-y-auto">
+        <div class="admin-fixtures mt-4">
           <article
             v-for="m in filteredMatches"
             :key="m.id"
@@ -221,53 +238,65 @@
       </section>
     </div>
     <div v-else class="stack">
-      <section class="panel">
-        <div class="section-head">
-          <h2>Thêm thành viên</h2>
-          <ClubIcon name="users" />
-        </div>
-        <form
-          @submit.prevent="createUser"
-          class="grid gap-4 md:grid-cols-5 items-end"
+      <section class="panel admin-member-form">
+        <button
+          type="button"
+          class="disclosure-heading"
+          :aria-expanded="memberFormOpen"
+          aria-controls="member-form"
+          @click="memberFormOpen = !memberFormOpen"
         >
-          <label
-            ><span class="field-label">Tài khoản</span
-            ><input
-              v-model="newUser.username"
-              class="field"
-              required
-              maxlength="100"
-              autocomplete="off" /></label
-          ><label
-            ><span class="field-label">Mật khẩu ban đầu</span
-            ><input
-              v-model="newUser.password"
-              class="field"
-              type="password"
-              minlength="6"
-              required
-              autocomplete="new-password" /></label
-          ><label
-            ><span class="field-label">Họ và tên</span
-            ><input
-              v-model="newUser.name"
-              class="field"
-              required
-              maxlength="150" /></label
-          ><label
-            ><span class="field-label">Đội cố định</span
-            ><select
-              v-model="newUser.home_team"
-              class="field"
-              aria-label="Đội cố định của thành viên mới"
-              required
-            >
-              <option value="" disabled>Chọn đội</option>
-              <option value="A">Đội A</option>
-              <option value="B">Đội B</option>
-            </select></label
-          ><button class="btn" :disabled="saving">Tạo thành viên</button>
-        </form>
+          <span><ClubIcon name="plus" /><span>Thêm thành viên</span></span
+          ><ClubIcon name="chevron" :class="{ 'rotate-180': memberFormOpen }" />
+        </button>
+        <div
+          id="member-form"
+          class="admin-form-body"
+          :class="{ 'is-open': memberFormOpen }"
+        >
+          <form
+            @submit.prevent="createUser"
+            class="grid gap-4 md:grid-cols-5 items-end"
+          >
+            <label
+              ><span class="field-label">Tài khoản</span
+              ><input
+                v-model="newUser.username"
+                class="field"
+                required
+                maxlength="100"
+                autocomplete="off" /></label
+            ><label
+              ><span class="field-label">Mật khẩu ban đầu</span
+              ><input
+                v-model="newUser.password"
+                class="field"
+                type="password"
+                minlength="6"
+                required
+                autocomplete="new-password" /></label
+            ><label
+              ><span class="field-label">Họ và tên</span
+              ><input
+                v-model="newUser.name"
+                class="field"
+                required
+                maxlength="150" /></label
+            ><label
+              ><span class="field-label">Đội cố định</span
+              ><select
+                v-model="newUser.home_team"
+                class="field"
+                aria-label="Đội cố định của thành viên mới"
+                required
+              >
+                <option value="" disabled>Chọn đội</option>
+                <option value="A">Đội A</option>
+                <option value="B">Đội B</option>
+              </select></label
+            ><button class="btn" :disabled="saving">Tạo thành viên</button>
+          </form>
+        </div>
       </section>
       <label class="block max-w-md"
         ><span class="field-label">Tìm thành viên</span
@@ -281,8 +310,8 @@
         Đội cố định dùng làm mặc định khi nạp điểm danh. Muốn mượn cầu thủ để
         cân bằng một buổi đá, chỉ chỉnh đội trong biên bản trận đó.
       </p>
-      <div class="table-shell">
-        <table class="data-table">
+      <div class="table-shell responsive-records member-records">
+        <table class="data-table" aria-label="Danh sách thành viên">
           <thead>
             <tr>
               <th>Tài khoản</th>
@@ -294,8 +323,8 @@
           </thead>
           <tbody>
             <tr v-for="u in filteredUsers" :key="u.id">
-              <td>{{ u.username }}</td>
-              <td>
+              <td data-label="Tài khoản">{{ u.username }}</td>
+              <td class="record-primary">
                 <div class="flex items-center gap-3">
                   <ClubAvatar
                     :src="u.avatar"
@@ -306,7 +335,7 @@
                   <span class="font-semibold">{{ u.name }}</span>
                 </div>
               </td>
-              <td>
+              <td data-label="Đội cố định">
                 <select
                   :value="u.home_team || ''"
                   @change="saveHomeTeam(u, $event)"
@@ -319,7 +348,7 @@
                   <option value="B">Đội B</option>
                 </select>
               </td>
-              <td>
+              <td data-label="Quyền truy cập">
                 <select
                   :value="u.role"
                   @change="saveRole(u, $event.target.value)"
@@ -333,7 +362,7 @@
                   <option value="admin">Quản trị viên</option>
                 </select>
               </td>
-              <td>
+              <td class="record-actions">
                 <div class="flex gap-2">
                   <router-link :to="`/profile/${u.id}`" class="btn secondary"
                     >Hồ sơ</router-link
@@ -355,7 +384,9 @@
               </td>
             </tr>
             <tr v-if="!filteredUsers.length">
-              <td colspan="5" class="muted">Không có thành viên phù hợp.</td>
+              <td colspan="5" class="muted record-empty">
+                Không có thành viên phù hợp.
+              </td>
             </tr>
           </tbody>
         </table>
@@ -375,6 +406,8 @@ import { useDialog } from "../composables/useDialog";
 const { addToast } = useToast(),
   { openConfirm, openPrompt } = useDialog(),
   currentUser = JSON.parse(localStorage.getItem("fcdbb_user") || "{}");
+const matchFormOpen = ref(window.matchMedia("(min-width: 981px)").matches),
+  memberFormOpen = ref(window.matchMedia("(min-width: 981px)").matches);
 const tab = ref("matches"),
   allMatches = ref([]),
   users = ref([]),
@@ -479,6 +512,7 @@ const saveMatch = () =>
     resetMatch();
   }, "Đã lưu lịch trận.");
 const editMatch = (m) => {
+  matchFormOpen.value = true;
   match.value = {
     ...m,
     start_time: toVietnamInput(m.start_time),

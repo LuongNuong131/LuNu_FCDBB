@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="matches-page">
     <div class="page-top">
       <div>
         <h1 class="page-heading">Mỗi trận đấu, một dấu ấn.</h1>
@@ -170,10 +170,10 @@
           <span class="badge">Bàn thắng & kiến tạo</span>
         </div>
         <div class="table-shell">
-          <table class="data-table">
+          <table class="data-table leaderboard-table">
             <thead>
               <tr>
-                <th>Cầu thủ</th>
+                <th scope="col">Cầu thủ</th>
                 <th class="numeric">Trận</th>
                 <th class="numeric">Bàn</th>
                 <th class="numeric">Kiến tạo</th>
@@ -185,7 +185,7 @@
                 v-for="(p, i) in summary.leaderboard.slice(0, 10)"
                 :key="p.userId"
               >
-                <td>
+                <td class="leaderboard-player">
                   <span class="text-xs muted mr-3">{{ i + 1 }}</span
                   >{{ p.name }}
                 </td>

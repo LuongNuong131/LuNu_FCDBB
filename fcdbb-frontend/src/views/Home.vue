@@ -1,10 +1,10 @@
 <template>
-  <div>
-    <div class="page-top">
+  <div class="home-page">
+    <div class="page-top home-welcome">
       <div>
         <h1 class="page-heading">Sẵn sàng cho trận tiếp theo.</h1>
         <p class="page-intro">
-          Chào {{ user.name }}. Mọi hoạt động của FC Đá Bay Bóng, ngay tại đây.
+          Chào {{ user.name }}. Hẹn nhau trên sân, cùng lưu lại hành trình.
         </p>
       </div>
       <router-link to="/matches" class="btn secondary"
@@ -15,139 +15,156 @@
       {{ error }} <button class="btn secondary" @click="load">Thử lại</button>
     </div>
     <div class="home-main">
-      <section class="pitch">
-        <div class="pitch-lines"></div>
-        <div class="pitch-content">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <span class="badge green">{{
-              activeMatch
-                ? new Date(activeMatch.start_time) > new Date()
-                  ? "Lịch hẹn tiếp theo"
-                  : "Trận đang mở"
-                : "Lịch sinh hoạt đội"
-            }}</span
-            ><span class="text-xs muted">FC Đá Bay Bóng</span>
-          </div>
-          <div class="scoreboard">
-            <div class="scoreboard-team">
-              <span class="team-chip">A</span>Đội A
+      <div class="home-feature">
+        <section class="pitch home-pitch">
+          <div class="pitch-lines" aria-hidden="true"></div>
+          <div class="pitch-content">
+            <div class="fixture-heading">
+              <span class="badge green">{{
+                activeMatch
+                  ? new Date(activeMatch.start_time) > new Date()
+                    ? "Lịch hẹn tiếp theo"
+                    : "Trận đang mở"
+                  : "Lịch sinh hoạt đội"
+              }}</span
+              ><span class="fixture-club">FC Đá Bay Bóng</span>
             </div>
-            <div class="score-large">vs</div>
-            <div class="scoreboard-team">
-              <span class="team-chip b">B</span>Đội B
+            <div v-if="activeMatch" class="scoreboard">
+              <div class="scoreboard-team">
+                <span class="team-chip">A</span>Đội A
+              </div>
+              <div class="score-large">vs</div>
+              <div class="scoreboard-team">
+                <span class="team-chip b">B</span>Đội B
+              </div>
             </div>
-          </div>
-          <h2 class="text-xl font-bold mb-3">
-            {{ activeMatch?.title || "Hẹn gặp nhau trên sân." }}
-          </h2>
-          <MatchFacts v-if="activeMatch" :match="activeMatch" />
-          <p v-else class="muted text-sm">
-            {{
-              loading
-                ? "Đang tải lịch thi đấu…"
-                : "Chưa có lịch trận mới. Quản trị viên có thể thêm lịch trong khu vực quản trị."
-            }}
-          </p>
-          <div v-if="activeMatch" class="mt-6 flex flex-wrap gap-3">
-            <button
-              class="btn"
-              @click="checkin"
-              :disabled="checking || hasCheckedIn"
-            >
-              <ClubIcon :name="hasCheckedIn ? 'check' : 'pin'" />{{
-                checking
-                  ? "Đang lấy vị trí…"
-                  : hasCheckedIn
-                    ? "Đã điểm danh"
-                    : "Điểm danh tại sân"
-              }}</button
-            ><router-link
-              :to="`/matches/${activeMatch.id}`"
+            <div v-else class="next-fixture-empty">
+              <ClubIcon name="calendar" />
+              <div>
+                <h2>Hẹn gặp nhau trên sân.</h2>
+                <p>
+                  {{
+                    loading
+                      ? "Đang tải lịch thi đấu…"
+                      : "Chưa có lịch trận mới. Cùng theo dõi lịch hẹn tiếp theo của đội."
+                  }}
+                </p>
+              </div>
+            </div>
+            <h2 v-if="activeMatch" class="fixture-title">
+              {{ activeMatch.title }}
+            </h2>
+            <MatchFacts v-if="activeMatch" :match="activeMatch" />
+            <div v-if="activeMatch" class="fixture-actions">
+              <button
+                class="btn"
+                @click="checkin"
+                :disabled="checking || hasCheckedIn"
+              >
+                <ClubIcon :name="hasCheckedIn ? 'check' : 'pin'" />{{
+                  checking
+                    ? "Đang lấy vị trí…"
+                    : hasCheckedIn
+                      ? "Đã điểm danh"
+                      : "Điểm danh tại sân"
+                }}</button
+              ><router-link
+                :to="`/matches/${activeMatch.id}`"
+                class="btn secondary"
+                >Xem chi tiết trận<ClubIcon name="arrow"
+              /></router-link>
+            </div>
+            <router-link
+              v-else-if="user.role === 'admin' && !loading"
+              to="/admin"
               class="btn secondary"
-              >Xem chi tiết trận<ClubIcon name="arrow"
-            /></router-link>
+              ><ClubIcon name="plus" />Lên lịch buổi đá</router-link
+            >
+            <p v-if="activeMatch" class="hint">
+              Điểm danh trong bán kính 50m. Mốc tính đi muộn:
+              {{ formatVietnamDateTime(activeMatch.lock_time) }}.
+            </p>
           </div>
-          <p v-if="activeMatch" class="hint">
-            Điểm danh trong bán kính 50m. Mốc tính đi muộn:
-            {{ formatVietnamDateTime(activeMatch.lock_time) }}.
-          </p>
+        </section>
+        <div class="metric-grid home-metrics">
+          <div class="metric">
+            <ClubIcon name="calendar" /><span class="stat-label"
+              >Trận đã chốt</span
+            ><strong class="metric-value">{{ summary.completed }}</strong>
+          </div>
+          <div class="metric">
+            <ClubIcon name="trophy" /><span class="stat-label">Bàn thắng</span
+            ><strong class="metric-value">{{ summary.totalGoals }}</strong>
+          </div>
+          <div class="metric">
+            <ClubIcon name="users" /><span class="stat-label"
+              >Cầu thủ ra sân</span
+            ><strong class="metric-value">{{ summary.players }}</strong>
+          </div>
+          <div class="metric">
+            <ClubIcon name="check" /><span class="stat-label"
+              >Điểm danh trận tới</span
+            ><strong class="metric-value"
+              >{{ activeDetails.attendances?.length || 0
+              }}<span class="metric-unit">người</span></strong
+            >
+          </div>
         </div>
-      </section>
+      </div>
       <aside class="home-side">
-        <section class="panel">
+        <section class="panel home-standings">
           <div class="section-head">
             <h2>Nhịp thi đấu A/B</h2>
             <ClubIcon name="trophy" />
           </div>
-          <div v-for="t in summary.standings" :key="t.team" class="person-row">
-            <span class="flex items-center gap-3"
-              ><span class="team-chip" :class="{ b: t.team === 'B' }">{{
+          <div class="home-team-list">
+            <div
+              v-for="t in summary.standings"
+              :key="t.team"
+              class="person-row"
+            >
+              <span class="team-chip" :class="{ b: t.team === 'B' }">{{
                 t.team
               }}</span
-              ><span
+              ><span class="home-team-copy"
                 ><strong>Đội {{ t.team }}</strong
-                ><span class="block text-xs muted"
+                ><span
                   >{{ t.won }} thắng / {{ t.drawn }} hòa /
                   {{ t.lost }} thua</span
                 ></span
-              ></span
-            ><strong class="text-lg"
-              >{{ t.points }}
-              <span class="text-xs font-normal muted">điểm</span></strong
-            >
+              ><strong class="home-team-points"
+                >{{ t.points }}<span>điểm</span></strong
+              >
+            </div>
           </div>
-          <p class="hint">
-            Toàn bộ biên bản đã chốt · Thắng 3 điểm, hòa 1 điểm.
-          </p>
-        </section>
-        <section class="panel">
-          <h2 class="text-sm font-bold mb-1">Không bỏ lỡ hoạt động đội</h2>
-          <router-link to="/players" class="quick-link"
-            ><span class="flex items-center gap-3"
-              ><ClubIcon name="users" />Danh sách cầu thủ</span
-            ><ClubIcon name="arrow" /></router-link
-          ><router-link to="/funds" class="quick-link"
-            ><span class="flex items-center gap-3"
-              ><ClubIcon name="wallet" />Thu chi quỹ đội</span
-            ><ClubIcon name="arrow" /></router-link
-          ><router-link to="/blog" class="quick-link"
-            ><span class="flex items-center gap-3"
-              ><ClubIcon name="book" />Khoảnh khắc trên sân</span
-            ><ClubIcon name="arrow"
+          <router-link to="/matches" class="standings-link"
+            >Xem bảng xếp hạng<ClubIcon name="arrow"
           /></router-link>
         </section>
+        <nav class="home-shortcuts" aria-label="Tiện ích đội bóng">
+          <router-link to="/players"
+            ><ClubIcon name="users" /><span>Cầu thủ</span
+            ><ClubIcon name="arrow" /></router-link
+          ><router-link to="/funds"
+            ><ClubIcon name="wallet" /><span>Thu chi quỹ</span
+            ><ClubIcon name="arrow" /></router-link
+          ><router-link to="/blog"
+            ><ClubIcon name="book" /><span>Khoảnh khắc</span
+            ><ClubIcon name="arrow"
+          /></router-link>
+        </nav>
       </aside>
     </div>
-    <div class="metric-grid">
-      <div class="metric">
-        <span class="stat-label">Trận đã chốt</span
-        ><strong class="metric-value">{{ summary.completed }}</strong>
+    <section class="home-history" aria-labelledby="history-title">
+      <div class="section-head">
+        <div>
+          <h2 id="history-title">Nhìn lại những trận đã qua</h2>
+          <p class="hint">Lịch sân, đội hình và dấu ấn của từng buổi đá.</p>
+        </div>
+        <ClubIcon name="calendar" />
       </div>
-      <div class="metric">
-        <span class="stat-label">Bàn thắng</span
-        ><strong class="metric-value">{{ summary.totalGoals }}</strong>
-      </div>
-      <div class="metric">
-        <span class="stat-label">Cầu thủ đã ra sân</span
-        ><strong class="metric-value">{{ summary.players }}</strong>
-      </div>
-      <div class="metric">
-        <span class="stat-label">Điểm danh trận tới</span
-        ><strong class="metric-value"
-          >{{ activeDetails.attendances?.length || 0 }}
-          <span class="text-xs muted font-normal">người</span></strong
-        >
-      </div>
-    </div>
-    <div class="section-head">
-      <div>
-        <h2>Nhìn lại những trận đã qua</h2>
-        <p class="hint">
-          Lịch sân, đội hình, bàn thắng và điểm danh của từng buổi.
-        </p>
-      </div>
-    </div>
-    <MatchList initial-status="history" />
+      <MatchList initial-status="history" />
+    </section>
   </div>
 </template>
 <script setup>

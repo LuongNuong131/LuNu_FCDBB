@@ -1,8 +1,8 @@
 <template>
   <div
-    class="mx-auto grid min-h-[calc(100vh-140px)] max-w-5xl items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-20"
+    class="login-layout mx-auto grid min-h-[calc(100vh-140px)] max-w-5xl items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-20"
   >
-    <section>
+    <section class="login-story">
       <router-link to="/login" class="brand mb-10"
         ><span class="brand-mark">ĐB</span
         ><span
@@ -34,7 +34,7 @@
         </div>
       </div>
     </section>
-    <section class="panel !p-7 sm:!p-9">
+    <section class="panel login-form !p-7 sm:!p-9">
       <h2 class="text-2xl font-bold mb-2 tracking-tight">Chào mừng trở lại.</h2>
       <p class="muted text-sm mb-7">
         Đăng nhập để cập nhật hoạt động đội bóng.
@@ -47,17 +47,31 @@
             required
             class="field"
             autocomplete="username"
-            placeholder="Tài khoản thành viên" /></label
-        ><label
-          ><span class="field-label">Mật khẩu</span
-          ><input
-            v-model="password"
-            required
-            type="password"
-            class="field"
-            autocomplete="current-password"
-            placeholder="Mật khẩu của bạn"
+            placeholder="Tài khoản thành viên"
         /></label>
+        <div>
+          <label for="login-password"
+            ><span class="field-label">Mật khẩu</span></label
+          >
+          <div class="password-field">
+            <input
+              id="login-password"
+              v-model="password"
+              required
+              :type="showPassword ? 'text' : 'password'"
+              class="field"
+              autocomplete="current-password"
+              placeholder="Mật khẩu của bạn"
+            /><button
+              type="button"
+              :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+              :aria-pressed="showPassword"
+              @click="showPassword = !showPassword"
+            >
+              <ClubIcon name="eye" />
+            </button>
+          </div>
+        </div>
         <p v-if="error" class="error-state mb-0" role="alert">{{ error }}</p>
         <button class="btn w-full" :disabled="loading">
           {{ loading ? "Đang đăng nhập…" : "Đăng nhập"
@@ -79,6 +93,7 @@ import ClubIcon from "../components/ClubIcon.vue";
 const router = useRouter(),
   username = ref(""),
   password = ref(""),
+  showPassword = ref(false),
   error = ref(""),
   loading = ref(false);
 const login = async () => {

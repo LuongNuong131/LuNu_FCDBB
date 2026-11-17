@@ -1,19 +1,17 @@
 <template>
-  <div class="mx-auto w-full max-w-6xl space-y-8">
+  <div class="funds-page mx-auto w-full max-w-6xl space-y-6">
     <section
       class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"
     >
       <div>
         <p class="eyebrow mb-3">Sổ quỹ nội bộ</p>
-        <h1 class="page-heading">Quỹ <strong>đội bóng.</strong></h1>
+        <h1 class="page-heading">Quỹ đội bóng.</h1>
         <p class="page-intro mt-3">
           Mọi khoản thu chi đều được ghi nhận rõ ràng để tập thể luôn chủ động
           và minh bạch.
         </p>
       </div>
-      <div
-        class="rounded-2xl border border-emerald-300/15 bg-emerald-400/[.06] p-4 sm:min-w-[230px]"
-      >
+      <div class="fund-balance">
         <p class="stat-label text-emerald-700">Số dư hiện tại</p>
         <p
           class="mt-2 font-display text-2xl font-extrabold"
@@ -25,58 +23,66 @@
       </div>
     </section>
     <section v-if="isAdmin" class="glass-panel">
-      <div class="mb-5 flex items-center gap-3 border-b border-slate-200 pb-4">
-        <span
-          class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-300/10 text-lg text-amber-700"
-          >＋</span
-        >
-        <div>
-          <p class="eyebrow text-amber-700">Quản lý thu chi</p>
-          <h2 class="font-display text-lg font-extrabold text-slate-900">
-            Thêm giao dịch mới
-          </h2>
-        </div>
-      </div>
-      <div
-        class="grid gap-3 md:grid-cols-[140px_180px_1fr_auto] md:items-center"
+      <button
+        type="button"
+        class="disclosure-heading"
+        :aria-expanded="fundFormOpen"
+        aria-controls="fund-entry-form"
+        @click="fundFormOpen = !fundFormOpen"
       >
-        <select
-          aria-label="Loại giao dịch"
-          v-model="form.type"
-          class="glass-input font-bold"
-          :class="form.type === 'THU' ? 'text-emerald-700' : 'text-rose-700'"
+        <span><ClubIcon name="plus" /><span>Thêm giao dịch mới</span></span
+        ><ClubIcon name="chevron" :class="{ 'rotate-180': fundFormOpen }" />
+      </button>
+      <div
+        id="fund-entry-form"
+        class="admin-form-body"
+        :class="{ 'is-open': fundFormOpen }"
+      >
+        <div
+          class="grid gap-3 md:grid-cols-[140px_180px_1fr_auto] md:items-center"
         >
-          <option value="THU">＋ THU</option>
-          <option value="CHI">− CHI</option></select
-        ><input
-          aria-label="Số tiền (VNĐ)"
-          v-model="form.amount"
-          type="number"
-          placeholder="Số tiền (VNĐ)"
-          class="glass-input font-mono"
-        /><input
-          aria-label="Lý do thu chi"
-          v-model="form.reason"
-          type="text"
-          placeholder="Lý do thu / chi..."
-          class="glass-input"
-        />
-        <div class="flex gap-2">
-          <input
-            type="file"
-            @change="(e) => (form.file = e.target.files[0])"
-            id="fund-file"
-            class="hidden"
-          /><label
-            for="fund-file"
-            class="flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-center text-xs font-bold text-sky-700 transition hover:bg-slate-50 md:flex-none"
-            >{{ form.file ? "Đã chọn ảnh" : "Đính kèm ảnh" }}</label
-          ><button
-            @click="addFund"
-            class="glass-btn !w-auto whitespace-nowrap px-5"
+          <select
+            aria-label="Loại giao dịch"
+            v-model="form.type"
+            class="glass-input font-bold"
+            :class="form.type === 'THU' ? 'text-emerald-700' : 'text-rose-700'"
           >
-            Lưu
-          </button>
+            <option value="THU">＋ THU</option>
+            <option value="CHI">− CHI</option></select
+          ><input
+            aria-label="Số tiền (VNĐ)"
+            v-model="form.amount"
+            type="number"
+            min="1"
+            inputmode="numeric"
+            placeholder="Số tiền (VNĐ)"
+            class="glass-input font-mono"
+          /><input
+            aria-label="Lý do thu chi"
+            v-model="form.reason"
+            type="text"
+            placeholder="Lý do thu / chi..."
+            class="glass-input"
+          />
+          <div class="flex gap-2">
+            <input
+              type="file"
+              accept="image/*"
+              @change="(e) => (form.file = e.target.files[0])"
+              id="fund-file"
+              class="hidden"
+            /><label
+              for="fund-file"
+              class="flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-center text-xs font-bold text-sky-700 transition hover:bg-slate-50 md:flex-none"
+              >{{ form.file ? "Đã chọn ảnh" : "Đính kèm ảnh" }}</label
+            ><button
+              @click="addFund"
+              :disabled="saving"
+              class="glass-btn !w-auto whitespace-nowrap px-5"
+            >
+              {{ saving ? "Đang lưu…" : "Lưu" }}
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -93,8 +99,16 @@
           >{{ funds.length }} bản ghi</span
         >
       </div>
-      <div class="table-shell">
-        <table class="w-full min-w-[720px] text-left text-sm">
+      <div v-if="loadError" class="error-state" role="alert">
+        {{ loadError }}
+        <button class="btn secondary" @click="load">Thử lại</button>
+      </div>
+      <p v-if="loading" class="empty-state" role="status">Đang tải sổ quỹ…</p>
+      <div
+        v-else-if="!loadError"
+        class="table-shell responsive-records fund-records"
+      >
+        <table class="w-full text-left text-sm" aria-label="Lịch sử thu chi">
           <thead>
             <tr>
               <th>Thời gian</th>
@@ -107,10 +121,10 @@
           </thead>
           <tbody>
             <tr v-for="f in funds" :key="f.id">
-              <td class="font-mono text-xs text-slate-600">
+              <td data-label="Thời gian" class="text-xs text-slate-600">
                 {{ formatVietnamDateTime(f.created_at) }}
               </td>
-              <td>
+              <td data-label="Phân loại">
                 <span
                   class="rounded-full border px-2.5 py-1 text-[10px] font-extrabold tracking-[.14em]"
                   :class="
@@ -122,19 +136,20 @@
                 >
               </td>
               <td
-                class="font-mono font-bold"
+                data-label="Số tiền"
+                class="fund-amount font-bold"
                 :class="f.type === 'THU' ? 'text-emerald-700' : 'text-rose-700'"
               >
                 {{ f.type === "THU" ? "+" : "-"
                 }}{{ f.amount.toLocaleString() }}đ
               </td>
               <td
-                class="max-w-[280px] truncate font-medium text-slate-900"
+                class="record-primary fund-reason font-medium text-slate-900"
                 :title="f.reason"
               >
                 {{ f.reason }}
               </td>
-              <td class="text-center">
+              <td data-label="Minh chứng" class="record-proof">
                 <button
                   v-if="f.proof_image"
                   @click="viewImage(f.proof_image, f)"
@@ -143,7 +158,7 @@
                   Xem ảnh / tải</button
                 ><span v-else class="text-xs italic text-slate-600">—</span>
               </td>
-              <td v-if="isAdmin" class="text-right">
+              <td v-if="isAdmin" class="record-actions">
                 <button
                   @click="deleteFund(f.id)"
                   class="rounded-lg border border-rose-300/20 bg-rose-400/[.08] px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-400/20"
@@ -155,7 +170,7 @@
             <tr v-if="funds.length === 0">
               <td
                 :colspan="isAdmin ? 6 : 5"
-                class="p-12 text-center text-sm text-slate-500"
+                class="record-empty p-12 text-center text-sm text-slate-500"
               >
                 Chưa có giao dịch nào được ghi nhận.
               </td>
@@ -177,6 +192,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
+import ClubIcon from "../components/ClubIcon.vue";
 import ImagePreviewModal from "../components/ImagePreviewModal.vue";
 import { formatVietnamDateTime } from "../utils/datetime";
 import { resolveMediaUrl } from "../utils/media";
@@ -184,7 +200,11 @@ import { useToast } from "../composables/useToast";
 import { useDialog } from "../composables/useDialog";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-const funds = ref([]);
+const funds = ref([]),
+  loading = ref(true),
+  loadError = ref(""),
+  saving = ref(false);
+const fundFormOpen = ref(window.matchMedia("(min-width: 981px)").matches);
 const isAdmin =
   JSON.parse(localStorage.getItem("fcdbb_user") || "{}")?.role === "admin";
 const { addToast } = useToast();
@@ -202,11 +222,15 @@ const balance = computed(() => {
 });
 
 const load = async () => {
+  loading.value = true;
+  loadError.value = "";
   try {
     const res = await axios.get(`${API}/funds`);
     funds.value = res.data || [];
   } catch (e) {
-    console.error("Lỗi load quỹ:", e);
+    loadError.value = "Chưa tải được sổ quỹ. Kiểm tra kết nối và thử lại.";
+  } finally {
+    loading.value = false;
   }
 };
 onMounted(load);
@@ -220,8 +244,14 @@ const viewImage = (url, fund) => {
 };
 
 const addFund = async () => {
-  if (!form.value.amount || !form.value.reason)
+  if (saving.value) return;
+  if (
+    !Number.isFinite(Number(form.value.amount)) ||
+    Number(form.value.amount) <= 0 ||
+    !form.value.reason.trim()
+  )
     return addToast("Vui lòng nhập đủ số tiền và lý do!", "warning");
+  saving.value = true;
   const fd = new FormData();
   fd.append("type", form.value.type);
   fd.append("amount", form.value.amount);
@@ -230,10 +260,14 @@ const addFund = async () => {
   try {
     await axios.post(`${API}/funds`, fd);
     form.value = { type: "THU", amount: "", reason: "", file: null };
-    load();
+    const fileInput = document.getElementById("fund-file");
+    if (fileInput) fileInput.value = "";
+    await load();
     addToast("Đã lưu giao dịch!", "success");
   } catch (e) {
-    addToast("Lỗi lưu quỹ!", "error");
+    addToast("Chưa lưu được giao dịch. Vui lòng thử lại.", "error");
+  } finally {
+    saving.value = false;
   }
 };
 

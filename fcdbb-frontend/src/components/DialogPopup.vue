@@ -30,7 +30,7 @@
           </div>
           <button
             @click="close(false)"
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-lg text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
             aria-label="Đóng"
           >
             &times;

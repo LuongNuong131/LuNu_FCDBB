@@ -179,11 +179,11 @@ test("discard confirmation traps keyboard focus and dismisses with Escape", asyn
   );
 });
 
-test("375, 768, 1024 and 1440px layouts fit the viewport and mobile navigation works", async ({
+test("320–1440px layouts fit the viewport and mobile navigation works", async ({
   page,
 }) => {
   await signIn(page);
-  for (const width of [375, 768, 1024, 1440]) {
+  for (const width of [320, 375, 430, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const path of [
       "/",
@@ -634,9 +634,209 @@ test("player avatars open a viewer separately from upload for admins and members
     });
   });
   await page.goto(`/profile/${players[0].id}`);
-  await expect(page.locator(".club-avatar")).toHaveText("NA");
+  await expect(page.locator(".profile-page .club-avatar")).toHaveText("NA");
   await expect(preview).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Đổi ảnh đại diện", exact: true }),
   ).toBeEnabled();
+});
+
+test("mobile navigation, compact filters and record cards support complete daily flows", async ({
+  page,
+  request,
+}) => {
+  await signIn(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const dock = page.getByRole("navigation", { name: "Thanh điều hướng nhanh" });
+  await expect(dock).toBeVisible();
+  await page.screenshot({
+    path: "test-results/home-active-mobile.png",
+    fullPage: true,
+  });
+  for (const el of await dock.locator("a,button").all()) {
+    const box = await el.boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.width).toBeGreaterThanOrEqual(44);
+  }
+  await expect(
+    dock.getByRole("link", { name: "Tổng quan", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  const more = dock.getByRole("button", { name: "Mở thêm tiện ích" });
+  await more.click();
+  const sheet = page.getByRole("dialog", { name: "Không gian đội bóng" });
+  await expect(sheet).toBeVisible();
+  await expect(
+    sheet.getByRole("button", { name: "Đóng điều hướng" }),
+  ).toBeFocused();
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe(
+    "hidden",
+  );
+  await page.keyboard.press("Shift+Tab");
+  await expect(
+    sheet.getByRole("button", { name: "Đăng xuất", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    sheet.getByRole("button", { name: "Đóng điều hướng" }),
+  ).toBeFocused();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({ path: "test-results/navigation-mobile.png" });
+  await page.keyboard.press("Escape");
+  await expect(sheet).not.toBeVisible();
+  await expect(more).toBeFocused();
+  expect(await page.evaluate(() => document.body.style.overflow)).not.toBe(
+    "hidden",
+  );
+
+  await page.getByRole("button", { name: "Bộ lọc", exact: true }).click();
+  await page.getByLabel("Mỗi trang").selectOption("6");
+  await expect(page.locator(".match-card")).toHaveCount(6);
+  await page.getByRole("button", { name: "Xóa bộ lọc", exact: true }).click();
+  await expect(page.getByLabel("Mỗi trang")).toHaveValue("12");
+  await expect(page.locator(".match-card")).toHaveCount(12);
+  await dock.getByRole("link", { name: "Trận đấu", exact: true }).click();
+  await expect(
+    dock.getByRole("link", { name: "Trận đấu", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".standings-mobile")).toBeVisible();
+  await expect(page.locator(".standings-mobile .standing-team")).toHaveCount(2);
+  await page.screenshot({
+    path: "test-results/seasons-mobile.png",
+    fullPage: true,
+  });
+
+  await dock.getByRole("link", { name: "Quỹ đội", exact: true }).click();
+  await expect(page.getByLabel("Số tiền (VNĐ)")).not.toBeVisible();
+  await page
+    .getByRole("button", { name: "Thêm giao dịch mới", exact: true })
+    .click();
+  await page.getByLabel("Số tiền (VNĐ)").fill("150000");
+  await page
+    .getByLabel("Lý do thu chi")
+    .fill("Thu quỹ buổi đá kiểm thử giao diện trên điện thoại");
+  await page.getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(page.locator(".fund-records tbody tr")).toHaveCount(1);
+  await expect(page.locator(".fund-reason")).toContainText("Thu quỹ buổi đá");
+  expect(
+    await page
+      .locator(".fund-records")
+      .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+  ).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page
+    .getByRole("button", { name: "Thêm giao dịch mới", exact: true })
+    .click();
+  await page.screenshot({
+    path: "test-results/funds-mobile.png",
+    fullPage: true,
+  });
+
+  await more.click();
+  await sheet.getByRole("link", { name: "Quản trị", exact: true }).click();
+  await expect(sheet).not.toBeVisible();
+  await expect(page.getByLabel("Tên trận", { exact: true })).not.toBeVisible();
+  await page
+    .getByRole("button", { name: "Thêm lịch trận", exact: true })
+    .click();
+  await expect(page.getByLabel("Tên trận", { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
+  await page
+    .getByLabel("Tên trận", { exact: true })
+    .fill("Buổi đá thêm từ điện thoại");
+  await page
+    .getByLabel("Tên sân", { exact: true })
+    .fill("Sân bóng Thống Nhất — Khu sân 2");
+  await page.getByLabel("Vĩ độ", { exact: true }).fill("10.78");
+  await page.getByLabel("Kinh độ", { exact: true }).fill("106.67");
+  for (const [name, hour, minute] of [
+    ["Bắt đầu trận (giờ Việt Nam)", "18", "00"],
+    ["Mốc tính đi muộn (giờ Việt Nam)", "18", "15"],
+    ["Kết thúc buổi đá (giờ Việt Nam)", "20", "00"],
+  ]) {
+    await page.getByLabel(name, { exact: true }).fill("2026-02-02");
+    await page.getByLabel(`${name} - giờ`, { exact: true }).selectOption(hour);
+    await page
+      .getByLabel(`${name} - phút`, { exact: true })
+      .selectOption(minute);
+  }
+  await page
+    .getByRole("button", { name: "Tạo lịch trận", exact: true })
+    .click();
+  await expect(
+    page
+      .locator(".admin-fixtures")
+      .getByRole("heading", {
+        name: "Buổi đá thêm từ điện thoại",
+        exact: true,
+      }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("button", { name: "Thêm lịch trận", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Thành viên", exact: true }).click();
+  await expect(page.getByLabel("Mật khẩu ban đầu")).not.toBeVisible();
+  await page.getByLabel("Tìm thành viên").fill(players[0].name);
+  await expect(page.locator(".member-records tbody tr")).toHaveCount(1);
+  const existing = (
+    await (
+      await request.get(`${API}/users/${players[0].id}`, { headers: headers() })
+    ).json()
+  ).home_team;
+  await page
+    .getByLabel(`Đội cố định của ${players[0].name}`, { exact: true })
+    .selectOption(existing === "A" ? "B" : "A");
+  await expect(
+    page.getByLabel(`Đội cố định của ${players[0].name}`, { exact: true }),
+  ).toBeEnabled();
+  expect(
+    await page
+      .locator(".member-records")
+      .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+  ).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({
+    path: "test-results/members-mobile.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Chuyển sang nền tối" }).click();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({
+    path: "test-results/members-mobile-dark.png",
+    fullPage: true,
+  });
+  await page
+    .locator(".member-records")
+    .getByRole("link", { name: "Hồ sơ", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: players[0].name, exact: true }),
+  ).toBeVisible();
+  await more.click();
+  await sheet.locator(".sheet-member").click();
+  await expect(
+    page.getByRole("heading", { name: admin.user.name, exact: true }),
+  ).toBeVisible();
+
+  await page.goto(`/matches/${completed.id}`);
+  await page
+    .getByRole("button", { name: "Chỉnh sửa biên bản", exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "Đi đến phần biên bản" })
+    .getByRole("link", { name: "Kết quả", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Tỉ số đội A", { exact: true }),
+  ).toBeInViewport();
+  const saveBar = page.locator(".report-save-bar");
+  await expect(saveBar).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({ path: "test-results/report-editor-mobile.png" });
 });

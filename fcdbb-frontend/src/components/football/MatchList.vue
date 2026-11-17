@@ -1,7 +1,7 @@
 <template>
   <section aria-label="Danh sách trận đấu">
-    <div class="filters">
-      <label
+    <div class="filters" :class="{ 'filters-open': filtersOpen }">
+      <label class="match-search"
         ><span class="field-label">Tìm trận hoặc sân</span
         ><input
           v-model="search"
@@ -9,34 +9,57 @@
           placeholder="Nhập tên trận, sân bóng…"
           type="search"
       /></label>
-      <label
-        ><span class="field-label">Mùa giải</span
-        ><select v-model="season" class="field">
-          <option value="">Tất cả mùa giải</option>
-          <option v-for="s in seasons" :key="s.id" :value="s.id">
-            {{ s.name }}{{ s.archived ? " (đã lưu trữ)" : "" }}
-          </option>
-        </select></label
+      <button
+        type="button"
+        class="btn secondary filter-toggle"
+        :aria-expanded="filtersOpen"
+        :aria-controls="filterId"
+        @click="filtersOpen = !filtersOpen"
       >
-      <label
-        ><span class="field-label">Trạng thái</span
-        ><select v-model="status" class="field">
-          <option value="">Tất cả trận</option>
-          <option value="upcoming">Đang mở / sắp tới</option>
-          <option value="history">Trận đã qua</option>
-          <option value="completed">Đã chốt kết quả</option>
-          <option value="cancelled">Đã hủy</option>
-        </select></label
-      >
-      <label
-        ><span class="field-label">Mỗi trang</span
-        ><select v-model="pageSize" class="field">
-          <option :value="6">6 trận</option>
-          <option :value="12">12 trận</option>
-          <option :value="24">24 trận</option>
-          <option :value="48">48 trận</option>
-        </select></label
-      >
+        <ClubIcon name="filter" />Bộ lọc<span
+          v-if="activeFilterCount"
+          class="filter-count"
+          >{{ activeFilterCount }}</span
+        >
+      </button>
+      <div :id="filterId" class="filter-options">
+        <label
+          ><span class="field-label">Mùa giải</span
+          ><select v-model="season" class="field">
+            <option value="">Tất cả mùa giải</option>
+            <option v-for="s in seasons" :key="s.id" :value="s.id">
+              {{ s.name }}{{ s.archived ? " (đã lưu trữ)" : "" }}
+            </option>
+          </select></label
+        >
+        <label
+          ><span class="field-label">Trạng thái</span
+          ><select v-model="status" class="field">
+            <option value="">Tất cả trận</option>
+            <option value="upcoming">Đang mở / sắp tới</option>
+            <option value="history">Trận đã qua</option>
+            <option value="completed">Đã chốt kết quả</option>
+            <option value="cancelled">Đã hủy</option>
+          </select></label
+        >
+        <label
+          ><span class="field-label">Mỗi trang</span
+          ><select v-model="pageSize" class="field">
+            <option :value="6">6 trận</option>
+            <option :value="12">12 trận</option>
+            <option :value="24">24 trận</option>
+            <option :value="48">48 trận</option>
+          </select></label
+        >
+        <button
+          v-if="activeFilterCount || search"
+          type="button"
+          class="reset-filters"
+          @click="resetFilters"
+        >
+          Xóa bộ lọc
+        </button>
+      </div>
     </div>
     <div v-if="error" class="error-state" role="alert">
       {{ error }} <button class="btn secondary" @click="load">Thử lại</button>
@@ -132,7 +155,7 @@
   </section>
 </template>
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, useId, watch, onMounted, onUnmounted } from "vue";
 import api from "../../api";
 import ClubIcon from "../ClubIcon.vue";
 import { formatVietnamDate, formatVietnamDateTime } from "../../utils/datetime";
@@ -142,6 +165,20 @@ const props = defineProps({
   seasonId: { type: [String, Number], default: "" },
 });
 const emit = defineEmits(["season-change"]);
+const filtersOpen = ref(false),
+  filterId = useId();
+const activeFilterCount = computed(
+  () =>
+    Number(Boolean(season.value)) +
+    Number(status.value !== props.initialStatus) +
+    Number(pageSize.value !== 12),
+);
+const resetFilters = () => {
+  search.value = "";
+  season.value = "";
+  status.value = props.initialStatus;
+  pageSize.value = 12;
+};
 const items = ref([]),
   seasons = ref([]),
   search = ref(""),

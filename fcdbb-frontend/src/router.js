@@ -30,7 +30,15 @@ const routes = [
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
-const router = createRouter({ history: createWebHistory(), routes });
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition;
+    if (to.hash) return { el: to.hash, top: 90 };
+    return { top: 0 };
+  },
+});
 
 router.beforeEach((to, from, next) => {
   let user;

@@ -1,73 +1,60 @@
 <template>
-  <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-    <div class="mb-2 flex items-center justify-between gap-3">
-      <label
-        :for="`${id}-date`"
-        class="text-[10px] font-extrabold uppercase tracking-[.16em]"
-        :class="toneClass"
-        >{{ label }}</label
-      >
-      <span class="text-[10px] font-semibold text-slate-500"
-        >Giờ Việt Nam · 24h</span
-      >
+  <div class="date-time-field">
+    <div class="date-time-heading">
+      <label :for="`${id}-date`" :class="toneClass">{{ label }}</label
+      ><span>Giờ Việt Nam · 24h</span>
     </div>
-
-    <div class="grid grid-cols-[1.08fr_1fr] gap-2">
-      <input
-        :id="`${id}-date`"
-        v-model="dateDraft"
-        type="date"
-        class="glass-input !px-3 !py-2.5 font-mono text-xs"
-        @change="emitValue"
-      />
-      <div class="grid grid-cols-3 gap-1.5">
-        <select
+    <input
+      :id="`${id}-date`"
+      v-model="dateDraft"
+      type="date"
+      class="field"
+      @change="emitValue"
+    />
+    <div class="time-parts">
+      <label
+        ><span>Giờ</span
+        ><select
           v-model="hourDraft"
           :aria-label="`${label} - giờ`"
-          class="glass-input !px-2 !py-2.5 text-center font-mono text-xs"
+          class="field"
           @change="emitValue"
         >
           <option v-for="hour in hours" :key="hour" :value="hour">
             {{ hour }}
           </option>
-        </select>
-        <select
+        </select></label
+      >
+      <label
+        ><span>Phút</span
+        ><select
           v-model="minuteDraft"
           :aria-label="`${label} - phút`"
-          class="glass-input !px-2 !py-2.5 text-center font-mono text-xs"
+          class="field"
           @change="emitValue"
         >
           <option v-for="minute in minutes" :key="minute" :value="minute">
             {{ minute }}
           </option>
-        </select>
-        <select
+        </select></label
+      >
+      <label
+        ><span>Giây</span
+        ><select
           v-model="secondDraft"
           :aria-label="`${label} - giây`"
-          class="glass-input !px-2 !py-2.5 text-center font-mono text-xs"
+          class="field"
           @change="emitValue"
         >
           <option v-for="second in seconds" :key="second" :value="second">
             {{ second }}
           </option>
-        </select>
-      </div>
-    </div>
-
-    <div
-      class="mt-2 grid grid-cols-[1.08fr_1fr] gap-2 text-[9px] font-bold uppercase tracking-[.12em] text-slate-500"
-    >
-      <span>Ngày / tháng / năm</span>
-      <span class="grid grid-cols-3 gap-1.5 text-center"
-        ><span>Giờ</span><span>Phút</span><span>Giây</span></span
+        </select></label
       >
     </div>
-    <p class="mt-2 text-[10px] text-slate-500">
-      {{ displayValue || "Chọn ngày và giờ" }}
-    </p>
+    <p class="hint">{{ displayValue || "Chọn ngày và giờ của buổi đá." }}</p>
   </div>
 </template>
-
 <script setup>
 import { computed, ref, watch } from "vue";
 import {
