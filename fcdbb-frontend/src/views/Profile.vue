@@ -22,25 +22,33 @@
         <div
           class="-mt-16 flex flex-col items-center gap-4 sm:-mt-20 sm:flex-row sm:items-end"
         >
-          <div class="group relative shrink-0">
+          <div class="flex shrink-0 flex-col items-center gap-3">
             <ClubAvatar
               :src="profile.avatar"
               :name="profile.name"
+              preview
               class="h-32 w-32 rounded-[1.75rem] border-4 border-white object-cover shadow-sm sm:h-40 sm:w-40"
             />
-            <div
-              v-if="isOwner || isAdmin"
-              class="absolute inset-0 flex cursor-pointer items-center justify-center rounded-[1.5rem] bg-black/65 opacity-0 transition group-hover:opacity-100"
-            >
-              <label
-                class="flex h-full w-full cursor-pointer items-center justify-center text-xs font-extrabold text-white"
-                >Đổi ảnh<input
-                  type="file"
-                  @change="uploadAvatar"
-                  accept="image/*"
-                  class="hidden"
-              /></label>
-            </div>
+            <template v-if="isOwner || isAdmin">
+              <button
+                type="button"
+                class="btn secondary"
+                :disabled="uploadingAvatar"
+                @click="avatarInput?.click()"
+              >
+                {{ uploadingAvatar ? "Đang tải ảnh…" : "Đổi ảnh đại diện" }}
+              </button>
+              <input
+                ref="avatarInput"
+                type="file"
+                accept="image/*"
+                aria-label="Chọn ảnh đại diện mới"
+                class="sr-only"
+                tabindex="-1"
+                :disabled="uploadingAvatar"
+                @change="uploadAvatar"
+              />
+            </template>
           </div>
           <div class="min-w-0 flex-1 text-center sm:pb-2 sm:text-left">
             <p class="eyebrow mb-2">Hồ sơ cầu thủ</p>
@@ -319,6 +327,8 @@ import { useToast } from "../composables/useToast";
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 const route = useRoute();
 const profile = ref(null);
+const avatarInput = ref(null);
+const uploadingAvatar = ref(false);
 const currentUser = JSON.parse(localStorage.getItem("fcdbb_user") || "{}");
 const { addToast } = useToast();
 const currentPassword = ref("");
@@ -338,7 +348,12 @@ onMounted(async () => {
 
 const uploadAvatar = async (event) => {
   const file = event.target.files[0];
-  if (!file) return;
+  if (!file || uploadingAvatar.value) return;
+  if (!file.type.startsWith("image/")) {
+    event.target.value = "";
+    return addToast("Vui lòng chọn một tệp hình ảnh.", "warning");
+  }
+  uploadingAvatar.value = true;
   const formData = new FormData();
   formData.append("file", file);
   try {
@@ -354,6 +369,9 @@ const uploadAvatar = async (event) => {
     addToast("Đổi ảnh đại diện thành công!", "success");
   } catch (e) {
     addToast("Lỗi tải ảnh đại diện!", "error");
+  } finally {
+    uploadingAvatar.value = false;
+    event.target.value = "";
   }
 };
 

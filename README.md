@@ -53,8 +53,8 @@ Phiên bản hiện tại được tổ chức theo mô hình **frontend–backe
 | Khu vực               | Chức năng                                                                                                         |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | **Trang chủ**         | Hiển thị trận đang hoạt động, lịch sử gần nhất và trạng thái điểm danh.                                           |
-| **Hồ sơ cầu thủ**     | Quản lý thông tin cá nhân, chỉ số thể chất, vị trí, avatar và mật khẩu.                                           |
-| **Danh sách cầu thủ** | Tra cứu thành viên, vai trò và thông tin cơ bản trong đội.                                                        |
+| **Hồ sơ cầu thủ**     | Quản lý thông tin cá nhân, chỉ số thể chất, vị trí và mật khẩu; bấm avatar để xem ảnh lớn/tải xuống, đổi ảnh bằng nút riêng cho chủ tài khoản hoặc admin.                                           |
+| **Danh sách cầu thủ** | Tra cứu thành viên, đội cố định, thống kê thi đấu và xem ảnh đại diện ngay trong danh sách hoặc bảng thành viên admin.                                                        |
 | **Lịch thi đấu**      | Tạo, cập nhật, xóa trận đấu; quản lý địa điểm và các mốc thời gian.                                               |
 | **Điểm danh**         | Xác thực thời gian, khoảng cách tới sân và trạng thái đúng giờ/đi muộn.                                           |
 | **Quỹ đội**           | Theo dõi khoản thu, khoản chi, lý do và ảnh minh chứng.                                                           |

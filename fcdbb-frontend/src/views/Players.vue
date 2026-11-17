@@ -58,12 +58,8 @@
       v-else-if="filtered.length"
       class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
-      <router-link
-        v-for="p in filtered"
-        :key="p.id"
-        :to="`/profile/${p.id}`"
-        class="match-card"
-        ><div class="flex justify-between items-center">
+      <article v-for="p in filtered" :key="p.id" class="match-card">
+        <div class="flex justify-between items-center">
           <span class="badge">{{
             p.role === "admin" ? "Quản trị viên" : "Cầu thủ"
           }}</span
@@ -79,9 +75,12 @@
           <ClubAvatar
             :src="p.avatar"
             :name="p.name"
+            preview
             class="h-20 w-20 rounded-xl mb-4"
           />
-          <h2 class="text-base font-bold mb-1">{{ p.name }}</h2>
+          <h2 class="text-base font-bold mb-1">
+            <router-link :to="`/profile/${p.id}`">{{ p.name }}</router-link>
+          </h2>
           <p class="text-xs muted mb-0">
             {{ p.nickname || p.position || "Chưa cập nhật vị trí" }}
           </p>
@@ -105,8 +104,14 @@
               playerStats(p.id).assists || 0
             }}</strong>
           </div>
-        </div></router-link
-      >
+        </div>
+        <router-link
+          :to="`/profile/${p.id}`"
+          class="btn secondary mt-4 w-full"
+          :aria-label="`Xem hồ sơ của ${p.name}`"
+          >Xem hồ sơ</router-link
+        >
+      </article>
     </section>
     <section v-else class="empty-state">
       <h2 class="text-lg font-bold">Chưa tìm thấy đồng đội</h2>
@@ -121,7 +126,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import api from "../api";
-import ClubIcon from "../components/ClubIcon.vue";
 import ClubAvatar from "../components/ClubAvatar.vue";
 const players = ref([]),
   stats = ref([]),

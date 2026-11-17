@@ -295,7 +295,17 @@
           <tbody>
             <tr v-for="u in filteredUsers" :key="u.id">
               <td>{{ u.username }}</td>
-              <td class="font-semibold">{{ u.name }}</td>
+              <td>
+                <div class="flex items-center gap-3">
+                  <ClubAvatar
+                    :src="u.avatar"
+                    :name="u.name"
+                    preview
+                    class="h-12 w-12 rounded-xl"
+                  />
+                  <span class="font-semibold">{{ u.name }}</span>
+                </div>
+              </td>
               <td>
                 <select
                   :value="u.home_team || ''"
@@ -357,6 +367,7 @@
 import { ref, computed, onMounted } from "vue";
 import api from "../api";
 import ClubIcon from "../components/ClubIcon.vue";
+import ClubAvatar from "../components/ClubAvatar.vue";
 import DateTimeField from "../components/DateTimeField.vue";
 import { formatVietnamDateTime, toVietnamInput } from "../utils/datetime";
 import { useToast } from "../composables/useToast";

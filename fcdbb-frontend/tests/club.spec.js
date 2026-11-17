@@ -499,3 +499,144 @@ test("deleting a blog article removes its complete album", async ({
       404,
     );
 });
+
+test("player avatars open a viewer separately from upload for admins and members", async ({
+  page,
+  request,
+  browser,
+}) => {
+  await signIn(page);
+  await page.goto(`/profile/${players[0].id}`);
+  const previewName = `Xem ảnh đại diện của ${players[0].name}`;
+  const preview = page.getByRole("button", { name: previewName, exact: true });
+  await expect(
+    page.getByRole("heading", { name: players[0].name }),
+  ).toBeVisible();
+  await expect(preview).toHaveCount(0);
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("button", { name: "Đổi ảnh đại diện", exact: true })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "player-avatar.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  });
+  await expect(preview).toBeVisible();
+  const avatarSrc = await preview.locator("img").getAttribute("src");
+  let uploadCount = 0,
+    chooserCount = 0;
+  page.on("request", (r) => {
+    if (r.method() === "POST" && r.url().includes("/avatar")) uploadCount++;
+  });
+  page.on("filechooser", () => chooserCount++);
+  await preview.click();
+  const dialog = page.getByRole("dialog", {
+    name: `Xem ảnh: Ảnh đại diện của ${players[0].name}`,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator(".photo-stage img")).toHaveAttribute(
+    "src",
+    avatarSrc,
+  );
+  await expect(
+    dialog.getByRole("button", { name: "Đóng xem ảnh" }),
+  ).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("link", { name: "Mở tab mới" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    dialog.getByRole("button", { name: "Đóng xem ảnh" }),
+  ).toBeFocused();
+  const download = page.waitForEvent("download");
+  await dialog
+    .getByRole("button", { name: "Tải hình ảnh", exact: true })
+    .click();
+  expect((await download).suggestedFilename()).toBe("fcdbb-avatar-1.png");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(preview).toBeFocused();
+  expect(uploadCount).toBe(0);
+  expect(chooserCount).toBe(0);
+
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "Thành viên", exact: true }).click();
+  await page.getByRole("button", { name: previewName, exact: true }).click();
+  await expect(dialog).toBeVisible();
+  await page.getByRole("button", { name: "Đóng xem ảnh" }).click();
+  await page.goto("/players");
+  await page.getByRole("button", { name: previewName, exact: true }).click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page
+    .getByRole("link", {
+      name: `Xem hồ sơ của ${players[0].name}`,
+      exact: true,
+    })
+    .click();
+  await expect(preview).toBeVisible();
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.getByRole("button", { name: "Chuyển sang nền tối" }).click();
+  await preview.click();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
+  await page.screenshot({ path: "test-results/avatar-viewer-mobile.png" });
+  await page.keyboard.press("Escape");
+
+  const member = await (
+    await request.post(`${API}/auth/login`, {
+      data: { username: "test1", password: "test123456" },
+    })
+  ).json();
+  const context = await browser.newContext();
+  try {
+    await context.addInitScript(({ token, user }) => {
+      localStorage.setItem("fcdbb_token", token);
+      localStorage.setItem("fcdbb_user", JSON.stringify(user));
+    }, member);
+    const memberPage = await context.newPage();
+    await memberPage.goto(`/profile/${players[0].id}`);
+    await expect(
+      memberPage.getByRole("heading", { name: players[0].name }),
+    ).toBeVisible();
+    await expect(
+      memberPage.getByRole("button", { name: "Đổi ảnh đại diện", exact: true }),
+    ).toHaveCount(0);
+    await memberPage
+      .getByRole("button", { name: previewName, exact: true })
+      .click();
+    await expect(memberPage.getByRole("dialog")).toBeVisible();
+    await memberPage.keyboard.press("Escape");
+    await memberPage.goto(`/profile/${players[1].id}`);
+    await expect(
+      memberPage.getByRole("button", { name: "Đổi ảnh đại diện", exact: true }),
+    ).toBeVisible();
+  } finally {
+    await context.close();
+  }
+
+  await page.route(`**/api/users/${players[0].id}`, async (route) => {
+    const response = await route.fetch();
+    const user = await response.json();
+    await route.fulfill({
+      response,
+      json: { ...user, avatar: "/missing-avatar-test.png" },
+    });
+  });
+  await page.goto(`/profile/${players[0].id}`);
+  await expect(page.locator(".club-avatar")).toHaveText("NA");
+  await expect(preview).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Đổi ảnh đại diện", exact: true }),
+  ).toBeEnabled();
+});
