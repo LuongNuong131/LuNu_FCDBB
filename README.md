@@ -15,6 +15,12 @@
 
 > **FCDBB** không chỉ là một trang blog. Đây là “phòng điều hành số” của đội bóng: nơi thông tin được cập nhật, hoạt động được ghi nhận và mọi thành viên có thể theo dõi hành trình chung của FC một cách rõ ràng, nhanh chóng và có tổ chức.
 
+## Nâng cấp quản lý đội bóng A/B
+
+Giao diện sáng thống nhất trên desktop/mobile, trang chủ 12 trận mỗi trang (chọn tối đa 48), tìm kiếm và lọc lịch sử. Mỗi trận có biên bản riêng: mùa giải, đội hình A/B, tỉ số, bàn thắng/kiến tạo/phản lưới, MVP, ghi chú, điểm danh GPS và nhật ký chỉnh sửa. Thêm bảng xếp hạng mùa giải, thống kê cầu thủ, xuất CSV, phân quyền API và CI tự động.
+
+**[Hướng dẫn đầy đủ, API, schema và triển khai](docs/club-management.md)** · [Design system](docs/design-system.md)
+
 ## Mục lục
 
 - [Tổng quan](#tổng-quan)
@@ -44,17 +50,17 @@ Phiên bản hiện tại được tổ chức theo mô hình **frontend–backe
 
 ## Điểm nổi bật
 
-| Khu vực | Chức năng |
-| --- | --- |
-| **Trang chủ** | Hiển thị trận đang hoạt động, lịch sử gần nhất và trạng thái điểm danh. |
-| **Hồ sơ cầu thủ** | Quản lý thông tin cá nhân, chỉ số thể chất, vị trí, avatar và mật khẩu. |
-| **Danh sách cầu thủ** | Tra cứu thành viên, vai trò và thông tin cơ bản trong đội. |
-| **Lịch thi đấu** | Tạo, cập nhật, xóa trận đấu; quản lý địa điểm và các mốc thời gian. |
-| **Điểm danh** | Xác thực thời gian, khoảng cách tới sân và trạng thái đúng giờ/đi muộn. |
-| **Quỹ đội** | Theo dõi khoản thu, khoản chi, lý do và ảnh minh chứng. |
-| **Blog nội bộ** | Đọc bài viết; admin tạo, sửa, xóa bài và tải ảnh minh họa. |
-| **Xác thực** | Đăng nhập bằng JWT, phân quyền admin/user và băm mật khẩu bằng bcrypt. |
-| **Lưu trữ ảnh** | Local storage khi phát triển; Supabase Storage khi có cấu hình production. |
+| Khu vực               | Chức năng                                                                  |
+| --------------------- | -------------------------------------------------------------------------- |
+| **Trang chủ**         | Hiển thị trận đang hoạt động, lịch sử gần nhất và trạng thái điểm danh.    |
+| **Hồ sơ cầu thủ**     | Quản lý thông tin cá nhân, chỉ số thể chất, vị trí, avatar và mật khẩu.    |
+| **Danh sách cầu thủ** | Tra cứu thành viên, vai trò và thông tin cơ bản trong đội.                 |
+| **Lịch thi đấu**      | Tạo, cập nhật, xóa trận đấu; quản lý địa điểm và các mốc thời gian.        |
+| **Điểm danh**         | Xác thực thời gian, khoảng cách tới sân và trạng thái đúng giờ/đi muộn.    |
+| **Quỹ đội**           | Theo dõi khoản thu, khoản chi, lý do và ảnh minh chứng.                    |
+| **Blog nội bộ**       | Đọc bài viết; admin tạo, sửa, xóa bài và tải ảnh minh họa.                 |
+| **Xác thực**          | Đăng nhập bằng JWT, phân quyền admin/user và băm mật khẩu bằng bcrypt.     |
+| **Lưu trữ ảnh**       | Local storage khi phát triển; Supabase Storage khi có cấu hình production. |
 
 ## Kiến trúc hệ thống
 
@@ -72,18 +78,18 @@ Frontend mặc định gọi API tại `http://localhost:3000/api`. Backend ph�
 
 ## Công nghệ sử dụng
 
-| Thành phần | Công nghệ |
-| --- | --- |
-| **UI** | Vue 3, Vue Router, Tailwind CSS |
-| **Build tool** | Vite |
-| **HTTP client** | Axios |
-| **API server** | NestJS 11, Express |
-| **ORM** | TypeORM |
-| **Authentication** | JWT, bcrypt |
-| **Local database** | better-sqlite3 |
-| **Production database** | PostgreSQL, tương thích Supabase |
-| **Object storage** | Local `public/uploads` hoặc Supabase Storage |
-| **Ngôn ngữ** | JavaScript, TypeScript |
+| Thành phần              | Công nghệ                                    |
+| ----------------------- | -------------------------------------------- |
+| **UI**                  | Vue 3, Vue Router, Tailwind CSS              |
+| **Build tool**          | Vite                                         |
+| **HTTP client**         | Axios                                        |
+| **API server**          | NestJS 11, Express                           |
+| **ORM**                 | TypeORM                                      |
+| **Authentication**      | JWT, bcrypt                                  |
+| **Local database**      | better-sqlite3                               |
+| **Production database** | PostgreSQL, tương thích Supabase             |
+| **Object storage**      | Local `public/uploads` hoặc Supabase Storage |
+| **Ngôn ngữ**            | JavaScript, TypeScript                       |
 
 ## Cấu trúc thư mục
 
@@ -117,12 +123,12 @@ LuNu_FCDBB/
 
 ## Yêu cầu môi trường
 
-| Thành phần | Phiên bản khuyến nghị |
-| --- | --- |
-| Node.js | 20 LTS trở lên; Node.js 22 được khuyến nghị |
-| npm | 10 trở lên |
-| Git | Phiên bản hiện đại có hỗ trợ clone repository |
-| PostgreSQL/Supabase | Không bắt buộc khi chạy local |
+| Thành phần          | Phiên bản khuyến nghị                         |
+| ------------------- | --------------------------------------------- |
+| Node.js             | 20 LTS trở lên; Node.js 22 được khuyến nghị   |
+| npm                 | 10 trở lên                                    |
+| Git                 | Phiên bản hiện đại có hỗ trợ clone repository |
+| PostgreSQL/Supabase | Không bắt buộc khi chạy local                 |
 
 ## Khởi chạy nhanh
 
@@ -190,16 +196,16 @@ Truy cập địa chỉ Vite hiển thị trên terminal, thông thường là `
 
 ### Backend: `fcdbb-backend/.env`
 
-| Biến | Bắt buộc | Mô tả |
-| --- | --- | --- |
-| `PORT` | Không | Cổng HTTP, mặc định `3000`. |
-| `JWT_SECRET` | Production | Secret dùng để ký JWT; phải thay giá trị mẫu trước khi deploy. |
-| `DATABASE_URL` | Production | Chuỗi kết nối PostgreSQL. Bỏ trống để dùng SQLite local. |
-| `SQLITE_DB_PATH` | Không | Đường dẫn database local, mặc định `data/fcdbb.sqlite`. |
-| `SUPABASE_URL` | Tùy chọn | Project URL của Supabase để lưu ảnh cloud. |
-| `SUPABASE_KEY` | Tùy chọn | Key của Supabase Storage. |
-| `CORS_ORIGINS` | Không | Danh sách origin frontend, phân tách bằng dấu phẩy. |
-| `TYPEORM_SYNCHRONIZE` | Không | Chỉ bật có chủ đích khi muốn TypeORM đồng bộ schema PostgreSQL. |
+| Biến                  | Bắt buộc   | Mô tả                                                           |
+| --------------------- | ---------- | --------------------------------------------------------------- |
+| `PORT`                | Không      | Cổng HTTP, mặc định `3000`.                                     |
+| `JWT_SECRET`          | Production | Secret dùng để ký JWT; phải thay giá trị mẫu trước khi deploy.  |
+| `DATABASE_URL`        | Production | Chuỗi kết nối PostgreSQL. Bỏ trống để dùng SQLite local.        |
+| `SQLITE_DB_PATH`      | Không      | Đường dẫn database local, mặc định `data/fcdbb.sqlite`.         |
+| `SUPABASE_URL`        | Tùy chọn   | Project URL của Supabase để lưu ảnh cloud.                      |
+| `SUPABASE_KEY`        | Tùy chọn   | Key của Supabase Storage.                                       |
+| `CORS_ORIGINS`        | Không      | Danh sách origin frontend, phân tách bằng dấu phẩy.             |
+| `TYPEORM_SYNCHRONIZE` | Không      | Chỉ bật có chủ đích khi muốn TypeORM đồng bộ schema PostgreSQL. |
 
 ### Frontend: `fcdbb-frontend/.env`
 
@@ -213,11 +219,11 @@ Khi frontend được deploy, thay giá trị này bằng URL backend production
 
 Khi database local chưa có user `admin`, backend tự tạo tài khoản quản trị mặc định:
 
-| Trường | Giá trị |
-| --- | --- |
-| Username | `admin` |
+| Trường   | Giá trị    |
+| -------- | ---------- |
+| Username | `admin`    |
 | Password | `admin123` |
-| Role | `admin` |
+| Role     | `admin`    |
 
 > Đây chỉ là tài khoản bootstrap cho môi trường phát triển. Hãy đổi mật khẩu ngay sau lần đăng nhập đầu tiên và tuyệt đối không sử dụng thông tin mặc định này trong production.
 
@@ -225,24 +231,24 @@ Khi database local chưa có user `admin`, backend tự tạo tài khoản quả
 
 Tất cả endpoint dưới đây dùng prefix `/api`.
 
-| Method | Endpoint | Mục đích | Quyền |
-| --- | --- | --- | --- |
-| `GET` | `/ping` | Health check chống ngủ đông/kiểm tra server. | Public |
-| `POST` | `/auth/login` | Đăng nhập và nhận JWT. | Public |
-| `GET` | `/users` | Lấy danh sách cầu thủ. | App |
-| `GET` | `/users/:id` | Lấy hồ sơ một cầu thủ. | App |
-| `PUT` | `/users/:id` | Cập nhật hồ sơ. | App/Admin |
-| `POST` | `/users/:id/avatar` | Tải avatar với multipart field `file`. | App |
-| `GET` | `/home` | Lấy trận đang hoạt động và lịch sử gần nhất. | App |
-| `GET` | `/matches` | Lấy danh sách trận đấu. | App/Admin |
-| `POST` | `/attendance/checkin` | Điểm danh theo tọa độ GPS. | App |
-| `GET` | `/funds` | Lấy sổ quỹ đội. | App/Admin |
-| `GET` | `/blog` | Lấy các bài blog mới nhất. | App |
-| `POST` | `/blog` | Tạo bài viết dạng multipart. | Admin |
-| `PUT` | `/blog/:id` | Cập nhật bài viết. | Admin |
-| `DELETE` | `/blog/:id` | Xóa bài viết. | Admin |
+| Method   | Endpoint              | Mục đích                                     | Quyền     |
+| -------- | --------------------- | -------------------------------------------- | --------- |
+| `GET`    | `/ping`               | Health check chống ngủ đông/kiểm tra server. | Public    |
+| `POST`   | `/auth/login`         | Đăng nhập và nhận JWT.                       | Public    |
+| `GET`    | `/users`              | Lấy danh sách cầu thủ.                       | App       |
+| `GET`    | `/users/:id`          | Lấy hồ sơ một cầu thủ.                       | App       |
+| `PUT`    | `/users/:id`          | Cập nhật hồ sơ.                              | App/Admin |
+| `POST`   | `/users/:id/avatar`   | Tải avatar với multipart field `file`.       | App       |
+| `GET`    | `/home`               | Lấy trận đang hoạt động và lịch sử gần nhất. | App       |
+| `GET`    | `/matches`            | Lấy danh sách trận đấu.                      | App/Admin |
+| `POST`   | `/attendance/checkin` | Điểm danh theo tọa độ GPS.                   | App       |
+| `GET`    | `/funds`              | Lấy sổ quỹ đội.                              | App/Admin |
+| `GET`    | `/blog`               | Lấy các bài blog mới nhất.                   | App       |
+| `POST`   | `/blog`               | Tạo bài viết dạng multipart.                 | Admin     |
+| `PUT`    | `/blog/:id`           | Cập nhật bài viết.                           | Admin     |
+| `DELETE` | `/blog/:id`           | Xóa bài viết.                                | Admin     |
 
-Các route quản trị blog cần gửi header:
+Mọi API dữ liệu nội bộ (trừ `/api/ping` và `/api/auth/login`) cần gửi header:
 
 ```http
 Authorization: Bearer <jwt-token>
@@ -281,7 +287,6 @@ npm run preview
 
 ```bash
 curl http://localhost:3000/api/ping
-curl http://localhost:3000/api/blog
 curl -X POST http://localhost:3000/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"username":"admin","password":"admin123"}'
@@ -309,18 +314,18 @@ Trong production, hãy thay `JWT_SECRET`, giới hạn `CORS_ORIGINS` về đún
 
 ## Xử lý sự cố
 
-| Hiện tượng | Nguyên nhân thường gặp | Cách xử lý |
-| --- | --- | --- |
-| Frontend báo Network Error | Backend chưa chạy hoặc `VITE_API_URL` sai. | Kiểm tra `npm run start:dev`, `/api/ping` và giá trị `.env`. |
-| Backend không khởi động | Port `3000` đang bị chiếm. | Đổi `PORT` hoặc dừng process đang dùng port. |
-| Không đăng nhập được | Sai thông tin hoặc database cũ chứa user khác. | Dùng `admin/admin123` ở database local mới; không xóa database production. |
-| Ảnh không hiển thị | URL backend không truy cập được từ frontend. | Kiểm tra `image_url`, CORS và static path `/uploads`. |
-| Refresh `/blog` bị 404 | Hosting chưa cấu hình SPA fallback. | Chuyển mọi route frontend về `index.html`. |
-| Upload cloud lỗi | Thiếu hoặc sai biến Supabase. | Kiểm tra `SUPABASE_URL`, `SUPABASE_KEY` và bucket `uploads`. |
+| Hiện tượng                 | Nguyên nhân thường gặp                         | Cách xử lý                                                                 |
+| -------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------- |
+| Frontend báo Network Error | Backend chưa chạy hoặc `VITE_API_URL` sai.     | Kiểm tra `npm run start:dev`, `/api/ping` và giá trị `.env`.               |
+| Backend không khởi động    | Port `3000` đang bị chiếm.                     | Đổi `PORT` hoặc dừng process đang dùng port.                               |
+| Không đăng nhập được       | Sai thông tin hoặc database cũ chứa user khác. | Dùng `admin/admin123` ở database local mới; không xóa database production. |
+| Ảnh không hiển thị         | URL backend không truy cập được từ frontend.   | Kiểm tra `image_url`, CORS và static path `/uploads`.                      |
+| Refresh `/blog` bị 404     | Hosting chưa cấu hình SPA fallback.            | Chuyển mọi route frontend về `index.html`.                                 |
+| Upload cloud lỗi           | Thiếu hoặc sai biến Supabase.                  | Kiểm tra `SUPABASE_URL`, `SUPABASE_KEY` và bucket `uploads`.               |
 
 ## Định hướng phát triển
 
-Các bước tiếp theo có thể tập trung vào việc bổ sung DTO và validation schema bằng `class-validator`, đưa các route quản trị vào guard JWT thống nhất, bổ sung migration TypeORM, thêm phân trang blog, thêm tìm kiếm/lọc bài viết, viết test e2e cho luồng điểm danh và tích hợp CI để tự động build frontend/backend sau mỗi pull request.
+Các bước tiếp theo có thể tập trung vào thông báo lịch đấu, đăng ký tham gia trước trận, thu quỹ theo thành viên và phân trang/tìm kiếm blog. Quản lý mùa giải, biên bản A/B, bảo vệ API, migration bổ sung và kiểm thử CI đã có trong phiên bản này.
 
 ## Đóng góp
 

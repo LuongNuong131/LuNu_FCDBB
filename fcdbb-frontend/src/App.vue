@@ -1,84 +1,113 @@
 <template>
   <div class="app-shell">
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-4"
+      >Đến nội dung chính</a
+    >
     <header v-if="user" class="topbar">
-      <div class="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-10">
-        <router-link to="/" class="flex min-w-0 items-center gap-3" @click="mobileNavOpen = false">
-          <span class="brand-mark">⚽</span>
-          <span class="min-w-0">
-            <span class="brand-wordmark block truncate">FC Đá Bay Bóng</span>
-            <span class="brand-subtitle">Football club operating system</span>
-          </span>
-        </router-link>
-
-        <nav class="hidden items-center gap-1 md:flex" aria-label="Điều hướng chính">
-          <router-link to="/" class="nav-link">Tổng quan</router-link>
-          <router-link to="/players" class="nav-link">Đội hình</router-link>
-          <router-link to="/funds" class="nav-link">Quỹ đội</router-link>
-          <router-link to="/blog" class="nav-link">Blog</router-link>
-          <router-link :to="'/profile/' + user.id" class="nav-link">Hồ sơ</router-link>
-          <router-link v-if="user.role === 'admin'" to="/admin" class="nav-link !text-rose-300 hover:!text-rose-200">Quản trị</router-link>
+      <div class="header-inner">
+        <router-link to="/" class="brand"
+          ><span class="brand-mark">ĐB</span
+          ><span
+            ><span class="brand-wordmark">FC Đá Bay Bóng</span
+            ><span class="brand-subtitle"
+              >Cùng một đội. Cùng một hành trình.</span
+            ></span
+          ></router-link
+        >
+        <nav class="desktop-nav" aria-label="Điều hướng chính">
+          <router-link
+            v-for="link in links"
+            :key="link.to"
+            :to="link.to"
+            class="nav-link"
+            ><ClubIcon :name="link.icon" />{{ link.label }}</router-link
+          >
         </nav>
-
-        <div class="flex items-center gap-2 sm:gap-3">
-          <router-link :to="'/profile/' + user.id" class="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-3 py-2 sm:flex">
-            <img :src="user.avatar" class="h-7 w-7 rounded-lg object-cover" alt="Avatar" />
-            <span class="max-w-[120px] truncate text-xs font-bold text-slate-200">{{ user.name }}</span>
-          </router-link>
-          <button @click="logout" class="hidden rounded-xl border border-white/10 bg-white/[.04] px-3 py-2 text-[10px] font-extrabold uppercase tracking-[.14em] text-slate-300 transition hover:border-rose-300/40 hover:bg-rose-400/10 hover:text-rose-200 sm:block">Thoát</button>
-          <button @click="mobileNavOpen = !mobileNavOpen" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[.05] text-slate-200 md:hidden" aria-label="Mở menu">
-            <svg v-if="!mobileNavOpen" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-            <svg v-else class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 6 12 12M18 6 6 18" /></svg>
+        <div class="member-actions">
+          <router-link :to="`/profile/${user.id}`" class="member-link"
+            ><span
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-800"
+              >{{ user.name?.slice(0, 1) }}</span
+            ><span>{{ user.name }}</span></router-link
+          ><button
+            @click="logout"
+            class="icon-btn"
+            aria-label="Đăng xuất"
+            title="Đăng xuất"
+          >
+            <ClubIcon name="logout" /></button
+          ><button
+            class="icon-btn menu-toggle"
+            @click="mobileNavOpen = !mobileNavOpen"
+            :aria-expanded="mobileNavOpen"
+            aria-label="Mở điều hướng"
+          >
+            <ClubIcon :name="mobileNavOpen ? 'close' : 'menu'" />
           </button>
         </div>
-
-        <nav v-if="mobileNavOpen" class="mobile-nav" aria-label="Điều hướng di động">
-          <router-link to="/" class="nav-link" @click="mobileNavOpen = false">Tổng quan</router-link>
-          <router-link to="/players" class="nav-link" @click="mobileNavOpen = false">Đội hình</router-link>
-          <router-link to="/funds" class="nav-link" @click="mobileNavOpen = false">Quỹ đội</router-link>
-          <router-link to="/blog" class="nav-link" @click="mobileNavOpen = false">Blog khoảnh khắc</router-link>
-          <router-link :to="'/profile/' + user.id" class="nav-link" @click="mobileNavOpen = false">Hồ sơ cá nhân</router-link>
-          <router-link v-if="user.role === 'admin'" to="/admin" class="nav-link !text-rose-300" @click="mobileNavOpen = false">Khu vực quản trị</router-link>
-          <button @click="logout" class="mt-1 w-full rounded-xl border border-rose-300/20 bg-rose-400/10 px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-[.14em] text-rose-200">Đăng xuất</button>
-        </nav>
       </div>
+      <nav
+        v-if="mobileNavOpen"
+        class="mobile-nav"
+        aria-label="Điều hướng di động"
+      >
+        <router-link
+          v-for="link in links"
+          :key="link.to"
+          :to="link.to"
+          class="nav-link"
+          @click="mobileNavOpen = false"
+          ><ClubIcon :name="link.icon" />{{ link.label }}</router-link
+        ><router-link
+          :to="`/profile/${user.id}`"
+          class="nav-link"
+          @click="mobileNavOpen = false"
+          >Hồ sơ cá nhân</router-link
+        >
+      </nav>
     </header>
-
-    <main class="app-content">
-      <router-view v-slot="{ Component }">
-        <transition name="page" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
-    </main>
-
-    <ToastPopup />
-    <DialogPopup />
+    <main id="main-content" class="app-content"><router-view /></main>
+    <ToastPopup /><DialogPopup />
   </div>
 </template>
-
 <script setup>
-import { ref, watchEffect } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import ToastPopup from './components/ToastPopup.vue';
-import DialogPopup from './components/DialogPopup.vue';
-
-const router = useRouter();
-const route = useRoute();
-const user = ref(null);
-const mobileNavOpen = ref(false);
-
-watchEffect(() => {
-  const currentPath = route.path;
-  void currentPath;
-  user.value = JSON.parse(localStorage.getItem('fcdbb_user') || 'null');
-  mobileNavOpen.value = false;
-});
-
+import { ref, watch, computed } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import ToastPopup from "./components/ToastPopup.vue";
+import DialogPopup from "./components/DialogPopup.vue";
+import ClubIcon from "./components/ClubIcon.vue";
+const router = useRouter(),
+  route = useRoute(),
+  user = ref(null),
+  mobileNavOpen = ref(false);
+watch(
+  () => route.path,
+  () => {
+    try {
+      user.value = JSON.parse(localStorage.getItem("fcdbb_user") || "null");
+    } catch {
+      user.value = null;
+    }
+    mobileNavOpen.value = false;
+  },
+  { immediate: true },
+);
+const links = computed(() => [
+  { to: "/", label: "Tổng quan", icon: "home" },
+  { to: "/matches", label: "Trận đấu & mùa giải", icon: "calendar" },
+  { to: "/players", label: "Cầu thủ", icon: "users" },
+  { to: "/funds", label: "Quỹ đội", icon: "wallet" },
+  { to: "/blog", label: "Khoảnh khắc", icon: "book" },
+  ...(user.value?.role === "admin"
+    ? [{ to: "/admin", label: "Quản trị", icon: "settings" }]
+    : []),
+]);
 const logout = () => {
-  localStorage.removeItem('fcdbb_token');
-  localStorage.removeItem('fcdbb_user');
+  localStorage.removeItem("fcdbb_token");
+  localStorage.removeItem("fcdbb_user");
   user.value = null;
-  mobileNavOpen.value = false;
-  router.push('/login');
+  router.push("/login");
 };
 </script>

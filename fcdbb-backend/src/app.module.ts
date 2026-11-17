@@ -3,7 +3,8 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { mkdirSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
+import { ClubManagement1794900000000 } from './migrations/1794900000000-ClubManagement';
 import { FcdbbModule } from './fcdbb/fcdbb.module';
 
 function createDatabaseOptions(): TypeOrmModuleOptions {
@@ -15,12 +16,14 @@ function createDatabaseOptions(): TypeOrmModuleOptions {
       type: 'postgres',
       url: databaseUrl,
       autoLoadEntities: true,
+      migrations: [ClubManagement1794900000000],
+      migrationsRun: true,
       synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
       ssl: isProduction ? { rejectUnauthorized: false } : undefined,
     };
   }
 
-  const databasePath = join(
+  const databasePath = resolve(
     process.cwd(),
     process.env.SQLITE_DB_PATH || 'data/fcdbb.sqlite',
   );

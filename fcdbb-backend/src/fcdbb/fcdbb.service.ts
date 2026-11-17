@@ -4,11 +4,14 @@ import {
   UnauthorizedException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan, LessThanOrEqual } from 'typeorm';
+import { Repository, LessThanOrEqual } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { MatchAudit, MatchReport, Season } from '../football/football.entity';
+import type { Actor } from '../football/football.service';
 import * as bcrypt from 'bcrypt';
 import * as path from 'path';
 import { mkdir, unlink, writeFile } from 'fs/promises';
@@ -63,6 +66,13 @@ export class FcdbbService implements OnModuleInit {
   }
 
   async login(username: string, pass: string) {
+    if (
+      typeof username !== 'string' ||
+      typeof pass !== 'string' ||
+      !username.trim() ||
+      !pass
+    )
+      throw new BadRequestException('Nhập tài khoản và mật khẩu hợp lệ.');
     const user = await this.userRepo.findOne({ where: { username } });
     if (!user || !user.password || !(await bcrypt.compare(pass, user.password)))
       throw new UnauthorizedException('Sai tài khoản/mật khẩu!');
@@ -77,11 +87,32 @@ export class FcdbbService implements OnModuleInit {
   }
 
   async createUser(data: Partial<User>) {
-    const hashed = await bcrypt.hash(data.password || '', 10);
-    const user = await this.userRepo.save(
-      this.userRepo.create({ ...data, password: hashed }),
+    if (
+      typeof data.username !== 'string' ||
+      typeof data.name !== 'string' ||
+      !data.username.trim() ||
+      !data.name.trim() ||
+      data.username.length > 100 ||
+      data.name.length > 150 ||
+      typeof data.password !== 'string' ||
+      data.password.length < 6
+    )
+      throw new BadRequestException(
+        'Nhập tài khoản, họ tên và mật khẩu ít nhất 6 ký tự.',
+      );
+    if (await this.userRepo.existsBy({ username: data.username.trim() }))
+      throw new ConflictException('Tên tài khoản đã được sử dụng.');
+    const hashed = await bcrypt.hash(data.password, 10);
+    return this.sanitizeUser(
+      await this.userRepo.save(
+        this.userRepo.create({
+          username: data.username.trim(),
+          name: data.name.trim(),
+          password: hashed,
+          role: 'user',
+        }),
+      ),
     );
-    return this.sanitizeUser(user);
   }
 
   async getProfiles() {
@@ -101,14 +132,44 @@ export class FcdbbService implements OnModuleInit {
         (data.weight / Math.pow(data.height / 100, 2)).toFixed(2),
       );
     }
-    await this.userRepo.update(id, data);
+    const allowed = [
+      'name',
+      'nickname',
+      'dob',
+      'left_foot',
+      'right_foot',
+      'height',
+      'weight',
+      'bmi',
+      'phone',
+      'email',
+      'position',
+      'role',
+    ];
+    if (data.role && !['admin', 'user'].includes(data.role))
+      throw new BadRequestException('Quyền truy cập không hợp lệ.');
+    const update = Object.fromEntries(
+      Object.entries(data).filter(([key]) => allowed.includes(key)),
+    );
+    if (!Object.keys(update).length) return this.getProfileById(id);
+    await this.userRepo.update(id, update);
     return this.getProfileById(id);
   }
 
   async deleteUser(id: number) {
+    const user = await this.userRepo.findOneBy({ id });
+    if (!user) throw new BadRequestException('Thành viên không tồn tại.');
+    if (user.username === 'admin')
+      throw new BadRequestException('Không thể xóa tài khoản quản trị gốc.');
+    if (await this.attendanceRepo.count({ where: { user: { id } } }))
+      throw new BadRequestException(
+        'Thành viên có dữ liệu điểm danh. Giữ tài khoản để bảo toàn lịch sử.',
+      );
     return this.userRepo.delete(id);
   }
   async resetPassword(id: number, newPass: string) {
+    if (typeof newPass !== 'string' || newPass.length < 6)
+      throw new BadRequestException('Mật khẩu phải có ít nhất 6 ký tự.');
     const hashed = await bcrypt.hash(newPass, 10);
     await this.userRepo.update(id, { password: hashed });
     return { message: 'Đổi mật khẩu thành công' };
@@ -160,14 +221,17 @@ export class FcdbbService implements OnModuleInit {
 
   async getHomeData() {
     const now = new Date();
-    const activeMatch = await this.matchRepo.findOne({
-      where: { end_time: MoreThan(now) },
-      order: { start_time: 'ASC' },
-    });
+    const activeMatch = await this.matchRepo
+      .createQueryBuilder('m')
+      .leftJoin(MatchReport, 'r', 'r.match_id = m.id')
+      .where('m.end_time > :now', { now })
+      .andWhere('(r.status IS NULL OR r.status = :status)', { status: 'draft' })
+      .orderBy('m.start_time', 'ASC')
+      .getOne();
     const historyMatches = await this.matchRepo.find({
       where: { end_time: LessThanOrEqual(now) },
       order: { start_time: 'DESC' },
-      take: 3,
+      take: 12,
     });
     return { activeMatch, historyMatches };
   }
@@ -211,32 +275,143 @@ export class FcdbbService implements OnModuleInit {
       );
   }
 
-  async createMatch(data: Partial<Match>) {
-    const normalized = this.normalizeMatchTimes(data);
-    this.validateMatchTimes(normalized);
-    const endTimestamp = new Date(normalized.end_time as Date).getTime();
-    if (endTimestamp <= Date.now()) {
-      const received = this.formatVietnamDateTime(new Date(endTimestamp));
-      const serverNow = this.formatVietnamDateTime(new Date());
+  private matchFields(data: Partial<Match>) {
+    const keys = [
+      'title',
+      'location_name',
+      'lat',
+      'lng',
+      'map_link',
+      'start_time',
+      'lock_time',
+      'end_time',
+    ];
+    return Object.fromEntries(
+      Object.entries(data).filter(([key]) => keys.includes(key)),
+    ) as Partial<Match>;
+  }
+
+  private validateMatch(data: Partial<Match>) {
+    this.validateMatchTimes(data);
+    if (
+      typeof data.title !== 'string' ||
+      typeof data.location_name !== 'string' ||
+      !data.title.trim() ||
+      !data.location_name.trim() ||
+      data.title.length > 200 ||
+      data.location_name.length > 200
+    )
       throw new BadRequestException(
-        `Chốt sổ đang được nhận là ${received}, trong khi giờ hệ thống là ${serverNow}. Hãy chọn lại ngày/giờ chốt sổ sau hiện tại.`,
+        'Nhập tên trận và tên sân (tối đa 200 ký tự).',
       );
-    }
-    return this.matchRepo.save(this.matchRepo.create(normalized));
+    if (
+      data.lat === null ||
+      data.lng === null ||
+      String(data.lat).trim() === '' ||
+      String(data.lng).trim() === '' ||
+      !Number.isFinite(Number(data.lat)) ||
+      Math.abs(Number(data.lat)) > 90 ||
+      !Number.isFinite(Number(data.lng)) ||
+      Math.abs(Number(data.lng)) > 180
+    )
+      throw new BadRequestException('Tọa độ sân không hợp lệ.');
+    if (data.map_link && !/^https?:\/\//i.test(data.map_link))
+      throw new BadRequestException(
+        'Link bản đồ phải bắt đầu bằng http:// hoặc https://.',
+      );
   }
 
-  async updateMatch(id: number, data: Partial<Match>) {
-    const current = await this.matchRepo.findOne({ where: { id } });
-    if (!current) throw new BadRequestException('Trận đấu không tồn tại.');
-    const normalized = this.normalizeMatchTimes(data);
-    const merged = { ...current, ...normalized };
-    this.validateMatchTimes(merged);
-    await this.matchRepo.update(id, normalized);
-    return this.matchRepo.findOne({ where: { id } });
+  async createMatch(data: Partial<Match>, actor: Actor) {
+    const normalized = this.normalizeMatchTimes(this.matchFields(data));
+    this.validateMatch(normalized);
+    return this.matchRepo.manager.transaction(async (manager) => {
+      const match = await manager.save(
+        Match,
+        manager.create(Match, normalized),
+      );
+      await manager.save(
+        MatchAudit,
+        manager.create(MatchAudit, {
+          match_id: match.id,
+          actor_id: actor.id,
+          actor_name: actor.name,
+          action: 'match.created',
+          before: null,
+          after: match,
+        }),
+      );
+      return match;
+    });
   }
 
-  async deleteMatch(id: number) {
-    return this.matchRepo.delete(id);
+  async updateMatch(id: number, data: Partial<Match>, actor: Actor) {
+    return this.matchRepo.manager.transaction(async (manager) => {
+      const current = await manager.findOneBy(Match, { id });
+      if (!current) throw new BadRequestException('Trận đấu không tồn tại.');
+      const normalized = this.normalizeMatchTimes(this.matchFields(data));
+      const merged = { ...current, ...normalized };
+      this.validateMatch(merged);
+      const report = await manager.findOneBy(MatchReport, { match_id: id });
+      if (report?.status === 'completed')
+        throw new BadRequestException(
+          'Mở lại biên bản về bản nháp trước khi sửa lịch trận đã chốt.',
+        );
+      if (report?.season_id) {
+        const season = await manager.findOneByOrFail(Season, {
+          id: report.season_id,
+        });
+        const day = new Date(
+          new Date(merged.start_time).getTime() + 7 * 3600000,
+        )
+          .toISOString()
+          .slice(0, 10);
+        if (day < season.starts_on || day > season.ends_on)
+          throw new BadRequestException(
+            'Ngày thi đấu phải nằm trong mùa giải của trận.',
+          );
+      }
+      await manager.update(Match, id, normalized);
+      await manager.save(
+        MatchAudit,
+        manager.create(MatchAudit, {
+          match_id: id,
+          actor_id: actor.id,
+          actor_name: actor.name,
+          action: 'match.updated',
+          before: current,
+          after: merged,
+        }),
+      );
+      return merged;
+    });
+  }
+
+  async deleteMatch(id: number, actor: Actor) {
+    return this.matchRepo.manager.transaction(async (manager) => {
+      const current = await manager.findOneBy(Match, { id });
+      if (!current) throw new BadRequestException('Trận đấu không tồn tại.');
+      const report = await manager.findOneBy(MatchReport, { match_id: id });
+      const attendance = await manager.count(Attendance, {
+        where: { match: { id } },
+      });
+      if (report || attendance)
+        throw new BadRequestException(
+          'Trận đã có biên bản hoặc điểm danh. Chuyển sang trạng thái hủy để giữ lịch sử.',
+        );
+      await manager.delete(Match, id);
+      await manager.save(
+        MatchAudit,
+        manager.create(MatchAudit, {
+          match_id: id,
+          actor_id: actor.id,
+          actor_name: actor.name,
+          action: 'match.deleted',
+          before: current,
+          after: null,
+        }),
+      );
+      return { message: 'Đã xóa lịch trận chưa có dữ liệu.' };
+    });
   }
 
   private calcDist(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -265,6 +440,21 @@ export class FcdbbService implements OnModuleInit {
   }
 
   async checkin(userId: number, matchId: number, lat: number, lng: number) {
+    if (!Number.isInteger(matchId) || matchId < 1)
+      throw new BadRequestException('Trận đấu không hợp lệ.');
+    if (
+      ![lat, lng].every((v) => typeof v === 'number' && Number.isFinite(v)) ||
+      Math.abs(lat) > 90 ||
+      Math.abs(lng) > 180
+    )
+      throw new BadRequestException('Vị trí GPS không hợp lệ.');
+    const report = await this.matchRepo.manager.findOneBy(MatchReport, {
+      match_id: matchId,
+    });
+    if (report && report.status !== 'draft')
+      throw new BadRequestException(
+        'Trận đã chốt hoặc hủy, không thể điểm danh.',
+      );
     const exist = await this.attendanceRepo.findOne({
       where: { user: { id: userId }, match: { id: matchId } },
     });
@@ -316,7 +506,15 @@ export class FcdbbService implements OnModuleInit {
     const allUsers = await this.userRepo.find({ where: { role: 'user' } });
     const presentIds = attendances.map((a) => a.user.id);
     const absentUsers = allUsers.filter((u) => !presentIds.includes(u.id));
-    return { attendances, absentUsers };
+    return {
+      attendances: attendances.map((a) => ({
+        ...a,
+        user: this.sanitizeUser(a.user),
+      })),
+      absentUsers: absentUsers.map((u) => this.sanitizeUser(u)),
+      absenceNote:
+        'Danh sách chưa điểm danh được đối chiếu với thành viên hiện tại; không phải danh sách vắng mặt lịch sử.',
+    };
   }
 
   async getFunds() {
@@ -334,7 +532,9 @@ export class FcdbbService implements OnModuleInit {
     try {
       const payload = this.jwtService.verify(token);
       if (payload?.role !== 'admin')
-        throw new ForbiddenException('Chỉ admin mới có quyền quản lý blog.');
+        throw new ForbiddenException(
+          'Chỉ quản trị viên có quyền thực hiện thao tác này.',
+        );
       return payload;
     } catch (error) {
       if (error instanceof ForbiddenException) throw error;

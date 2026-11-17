@@ -1,8 +1,169 @@
 <template>
   <div class="mx-auto w-full max-w-6xl space-y-8">
-    <section class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p class="eyebrow mb-3">TEAM FINANCE · TRANSPARENCY</p><h1 class="page-heading">Quỹ <strong>đội bóng.</strong></h1><p class="page-intro mt-3">Mọi khoản thu chi đều được ghi nhận rõ ràng để tập thể luôn chủ động và minh bạch.</p></div><div class="rounded-2xl border border-emerald-300/15 bg-emerald-400/[.06] p-4 sm:min-w-[230px]"><p class="stat-label text-emerald-300">Số dư hiện tại</p><p class="mt-2 font-display text-2xl font-extrabold" :class="balance >= 0 ? 'text-emerald-300' : 'text-rose-300'">{{ balance.toLocaleString() }}<span class="ml-1 text-sm font-semibold text-slate-400">VNĐ</span></p></div></section>
-    <section v-if="isAdmin" class="glass-panel"><div class="mb-5 flex items-center gap-3 border-b border-white/[.08] pb-4"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-300/10 text-lg text-amber-300">＋</span><div><p class="eyebrow text-amber-300">ADMIN TOOL</p><h2 class="font-display text-lg font-extrabold text-white">Thêm giao dịch mới</h2></div></div><div class="grid gap-3 md:grid-cols-[140px_180px_1fr_auto] md:items-center"><select v-model="form.type" class="glass-input font-bold" :class="form.type === 'THU' ? 'text-emerald-300' : 'text-rose-300'"><option value="THU">＋ THU</option><option value="CHI">− CHI</option></select><input v-model="form.amount" type="number" placeholder="Số tiền (VNĐ)" class="glass-input font-mono"><input v-model="form.reason" type="text" placeholder="Lý do thu / chi..." class="glass-input"><div class="flex gap-2"><input type="file" @change="e => form.file = e.target.files[0]" id="fund-file" class="hidden"><label for="fund-file" class="flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[.04] px-4 text-center text-xs font-bold text-sky-200 transition hover:bg-white/[.08] md:flex-none">{{ form.file ? 'Đã chọn ảnh' : 'Đính kèm ảnh' }}</label><button @click="addFund" class="glass-btn !w-auto whitespace-nowrap px-5">Lưu</button></div></div></section>
-    <section class="space-y-4"><div class="flex items-center justify-between"><div><p class="eyebrow mb-2">LEDGER</p><h2 class="font-display text-2xl font-extrabold text-white">Lịch sử giao dịch</h2></div><span class="rounded-full border border-white/10 bg-white/[.04] px-3 py-1.5 text-xs font-bold text-slate-400">{{ funds.length }} bản ghi</span></div><div class="table-shell"><table class="w-full min-w-[720px] text-left text-sm"><thead><tr><th>Thời gian</th><th>Phân loại</th><th>Số tiền</th><th>Nội dung</th><th class="text-center">Minh chứng</th><th v-if="isAdmin" class="text-right">Tác vụ</th></tr></thead><tbody><tr v-for="f in funds" :key="f.id"><td class="font-mono text-xs text-slate-300">{{ new Date(f.created_at).toLocaleDateString('vi-VN') }} <span class="text-slate-500">{{ new Date(f.created_at).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) }}</span></td><td><span class="rounded-full border px-2.5 py-1 text-[10px] font-extrabold tracking-[.14em]" :class="f.type === 'THU' ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-300' : 'border-rose-300/20 bg-rose-400/10 text-rose-300'">{{ f.type }}</span></td><td class="font-mono font-bold" :class="f.type === 'THU' ? 'text-emerald-300' : 'text-rose-300'">{{ f.type === 'THU' ? '+' : '-' }}{{ f.amount.toLocaleString() }}đ</td><td class="max-w-[280px] truncate font-medium text-white" :title="f.reason">{{ f.reason }}</td><td class="text-center"><button v-if="f.proof_image" @click="viewImage(f.proof_image, f)" class="rounded-lg border border-sky-300/20 bg-sky-300/[.08] px-3 py-1.5 text-xs font-bold text-sky-200 transition hover:bg-sky-300/20">Xem ảnh / tải</button><span v-else class="text-xs italic text-slate-600">—</span></td><td v-if="isAdmin" class="text-right"><button @click="deleteFund(f.id)" class="rounded-lg border border-rose-300/20 bg-rose-400/[.08] px-3 py-1.5 text-xs font-bold text-rose-300 transition hover:bg-rose-400/20">Xóa</button></td></tr><tr v-if="funds.length === 0"><td :colspan="isAdmin ? 6 : 5" class="p-12 text-center text-sm text-slate-500">Chưa có giao dịch nào được ghi nhận.</td></tr></tbody></table></div></section>
+    <section
+      class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"
+    >
+      <div>
+        <p class="eyebrow mb-3">Sổ quỹ nội bộ</p>
+        <h1 class="page-heading">Quỹ <strong>đội bóng.</strong></h1>
+        <p class="page-intro mt-3">
+          Mọi khoản thu chi đều được ghi nhận rõ ràng để tập thể luôn chủ động
+          và minh bạch.
+        </p>
+      </div>
+      <div
+        class="rounded-2xl border border-emerald-300/15 bg-emerald-400/[.06] p-4 sm:min-w-[230px]"
+      >
+        <p class="stat-label text-emerald-700">Số dư hiện tại</p>
+        <p
+          class="mt-2 font-display text-2xl font-extrabold"
+          :class="balance >= 0 ? 'text-emerald-700' : 'text-rose-700'"
+        >
+          {{ balance.toLocaleString()
+          }}<span class="ml-1 text-sm font-semibold text-slate-600">VNĐ</span>
+        </p>
+      </div>
+    </section>
+    <section v-if="isAdmin" class="glass-panel">
+      <div class="mb-5 flex items-center gap-3 border-b border-slate-200 pb-4">
+        <span
+          class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-300/10 text-lg text-amber-700"
+          >＋</span
+        >
+        <div>
+          <p class="eyebrow text-amber-700">Quản lý thu chi</p>
+          <h2 class="font-display text-lg font-extrabold text-slate-900">
+            Thêm giao dịch mới
+          </h2>
+        </div>
+      </div>
+      <div
+        class="grid gap-3 md:grid-cols-[140px_180px_1fr_auto] md:items-center"
+      >
+        <select
+          aria-label="Loại giao dịch"
+          v-model="form.type"
+          class="glass-input font-bold"
+          :class="form.type === 'THU' ? 'text-emerald-700' : 'text-rose-700'"
+        >
+          <option value="THU">＋ THU</option>
+          <option value="CHI">− CHI</option></select
+        ><input
+          aria-label="Số tiền (VNĐ)"
+          v-model="form.amount"
+          type="number"
+          placeholder="Số tiền (VNĐ)"
+          class="glass-input font-mono"
+        /><input
+          aria-label="Lý do thu chi"
+          v-model="form.reason"
+          type="text"
+          placeholder="Lý do thu / chi..."
+          class="glass-input"
+        />
+        <div class="flex gap-2">
+          <input
+            type="file"
+            @change="(e) => (form.file = e.target.files[0])"
+            id="fund-file"
+            class="hidden"
+          /><label
+            for="fund-file"
+            class="flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-center text-xs font-bold text-sky-700 transition hover:bg-slate-50 md:flex-none"
+            >{{ form.file ? "Đã chọn ảnh" : "Đính kèm ảnh" }}</label
+          ><button
+            @click="addFund"
+            class="glass-btn !w-auto whitespace-nowrap px-5"
+          >
+            Lưu
+          </button>
+        </div>
+      </div>
+    </section>
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="eyebrow mb-2">Theo dõi quỹ đội</p>
+          <h2 class="font-display text-2xl font-extrabold text-slate-900">
+            Lịch sử giao dịch
+          </h2>
+        </div>
+        <span
+          class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600"
+          >{{ funds.length }} bản ghi</span
+        >
+      </div>
+      <div class="table-shell">
+        <table class="w-full min-w-[720px] text-left text-sm">
+          <thead>
+            <tr>
+              <th>Thời gian</th>
+              <th>Phân loại</th>
+              <th>Số tiền</th>
+              <th>Nội dung</th>
+              <th class="text-center">Minh chứng</th>
+              <th v-if="isAdmin" class="text-right">Tác vụ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="f in funds" :key="f.id">
+              <td class="font-mono text-xs text-slate-600">
+                {{ formatVietnamDateTime(f.created_at) }}
+              </td>
+              <td>
+                <span
+                  class="rounded-full border px-2.5 py-1 text-[10px] font-extrabold tracking-[.14em]"
+                  :class="
+                    f.type === 'THU'
+                      ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-700'
+                      : 'border-rose-300/20 bg-rose-400/10 text-rose-700'
+                  "
+                  >{{ f.type }}</span
+                >
+              </td>
+              <td
+                class="font-mono font-bold"
+                :class="f.type === 'THU' ? 'text-emerald-700' : 'text-rose-700'"
+              >
+                {{ f.type === "THU" ? "+" : "-"
+                }}{{ f.amount.toLocaleString() }}đ
+              </td>
+              <td
+                class="max-w-[280px] truncate font-medium text-slate-900"
+                :title="f.reason"
+              >
+                {{ f.reason }}
+              </td>
+              <td class="text-center">
+                <button
+                  v-if="f.proof_image"
+                  @click="viewImage(f.proof_image, f)"
+                  class="rounded-lg border border-sky-300/20 bg-sky-300/[.08] px-3 py-1.5 text-xs font-bold text-sky-700 transition hover:bg-sky-300/20"
+                >
+                  Xem ảnh / tải</button
+                ><span v-else class="text-xs italic text-slate-600">—</span>
+              </td>
+              <td v-if="isAdmin" class="text-right">
+                <button
+                  @click="deleteFund(f.id)"
+                  class="rounded-lg border border-rose-300/20 bg-rose-400/[.08] px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-400/20"
+                >
+                  Xóa
+                </button>
+              </td>
+            </tr>
+            <tr v-if="funds.length === 0">
+              <td
+                :colspan="isAdmin ? 6 : 5"
+                class="p-12 text-center text-sm text-slate-500"
+              >
+                Chưa có giao dịch nào được ghi nhận.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
     <ImagePreviewModal
       v-if="modalImg"
       :src="modalImg.src"
@@ -14,61 +175,83 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import axios from 'axios';
-import ImagePreviewModal from '../components/ImagePreviewModal.vue';
-import { resolveMediaUrl } from '../utils/media';
-import { useToast } from '../composables/useToast';
-import { useDialog } from '../composables/useDialog';
+import { ref, onMounted, computed } from "vue";
+import axios from "axios";
+import ImagePreviewModal from "../components/ImagePreviewModal.vue";
+import { formatVietnamDateTime } from "../utils/datetime";
+import { resolveMediaUrl } from "../utils/media";
+import { useToast } from "../composables/useToast";
+import { useDialog } from "../composables/useDialog";
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 const funds = ref([]);
-const isAdmin = JSON.parse(localStorage.getItem('fcdbb_user') || '{}')?.role === 'admin';
+const isAdmin =
+  JSON.parse(localStorage.getItem("fcdbb_user") || "{}")?.role === "admin";
 const { addToast } = useToast();
 const { openConfirm } = useDialog();
-const form = ref({ type: 'THU', amount: '', reason: '', file: null });
+const form = ref({ type: "THU", amount: "", reason: "", file: null });
 const modalImg = ref(null);
 
 const balance = computed(() => {
   if (!funds.value || !Array.isArray(funds.value)) return 0;
-  return funds.value.reduce((acc, curr) => curr.type === 'THU' ? acc + curr.amount : acc - curr.amount, 0);
+  return funds.value.reduce(
+    (acc, curr) =>
+      curr.type === "THU" ? acc + curr.amount : acc - curr.amount,
+    0,
+  );
 });
 
-const load = async () => { 
+const load = async () => {
   try {
-    const res = await axios.get(`${API}/funds`); 
-    funds.value = res.data || []; 
-  } catch (e) { console.error("Lỗi load quỹ:", e); }
+    const res = await axios.get(`${API}/funds`);
+    funds.value = res.data || [];
+  } catch (e) {
+    console.error("Lỗi load quỹ:", e);
+  }
 };
 onMounted(load);
 
 const viewImage = (url, fund) => {
   modalImg.value = {
     src: resolveMediaUrl(url),
-    alt: fund?.reason || 'Ảnh minh chứng giao dịch quỹ',
-    filename: `fcdbb-fund-${fund?.id || 'proof'}`,
+    alt: fund?.reason || "Ảnh minh chứng giao dịch quỹ",
+    filename: `fcdbb-fund-${fund?.id || "proof"}`,
   };
 };
 
 const addFund = async () => {
-  if (!form.value.amount || !form.value.reason) return addToast('Vui lòng nhập đủ số tiền và lý do!', 'warning');
+  if (!form.value.amount || !form.value.reason)
+    return addToast("Vui lòng nhập đủ số tiền và lý do!", "warning");
   const fd = new FormData();
-  fd.append('type', form.value.type); fd.append('amount', form.value.amount); fd.append('reason', form.value.reason);
-  if(form.value.file) fd.append('file', form.value.file);
+  fd.append("type", form.value.type);
+  fd.append("amount", form.value.amount);
+  fd.append("reason", form.value.reason);
+  if (form.value.file) fd.append("file", form.value.file);
   try {
     await axios.post(`${API}/funds`, fd);
-    form.value = { type: 'THU', amount: '', reason: '', file: null };
-    load(); addToast('Đã lưu giao dịch!', 'success');
-  } catch (e) { addToast('Lỗi lưu quỹ!', 'error'); }
+    form.value = { type: "THU", amount: "", reason: "", file: null };
+    load();
+    addToast("Đã lưu giao dịch!", "success");
+  } catch (e) {
+    addToast("Lỗi lưu quỹ!", "error");
+  }
 };
 
 const deleteFund = async (id) => {
-  if (await openConfirm('Bạn có chắc chắn muốn xóa giao dịch này?', { title: 'Xóa giao dịch?', tone: 'danger', confirmText: 'Xóa giao dịch' })) { 
+  if (
+    await openConfirm("Bạn có chắc chắn muốn xóa giao dịch này?", {
+      title: "Xóa giao dịch?",
+      tone: "danger",
+      confirmText: "Xóa giao dịch",
+    })
+  ) {
     try {
-      await axios.delete(`${API}/funds/${id}`); 
+      await axios.delete(`${API}/funds/${id}`);
       load();
-      addToast('Đã xóa giao dịch.', 'success');
-    } catch (e) { addToast('Lỗi xóa!', 'error'); }
+      addToast("Đã xóa giao dịch.", "success");
+    } catch (e) {
+      addToast("Lỗi xóa!", "error");
+    }
   }
 };
 </script>
