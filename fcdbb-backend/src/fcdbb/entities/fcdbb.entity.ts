@@ -26,6 +26,8 @@ export class User {
   @Column({ default: 'Chưa rõ' }) position: string;
   @Column({ default: '/images/players/default.jpg' }) avatar: string;
   @Column({ default: 'user' }) role: string;
+  @Column({ type: 'varchar', length: 1, nullable: true }) home_team:
+    'A' | 'B' | null;
 }
 
 @Entity('matches')
@@ -68,7 +70,9 @@ export class BlogPost {
   @Column() title: string;
   @Column({ nullable: true, type: 'text' }) excerpt: string;
   @Column({ nullable: true, type: 'text' }) content: string;
-  @Column({ nullable: true }) image_url: string;
+  @Column({ type: 'varchar', nullable: true }) image_url: string | null;
+  @Column('simple-json', { nullable: true }) images: string[] | null;
+  @Column({ default: 1 }) revision: number;
   @Column({ nullable: true }) author_id: number;
   @CreateDateColumn() created_at: Date;
   @UpdateDateColumn() updated_at: Date;

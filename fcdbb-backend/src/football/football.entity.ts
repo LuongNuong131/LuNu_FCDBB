@@ -15,6 +15,7 @@ export interface RosterPlayer {
   userId: number;
   name: string;
   team: 'A' | 'B';
+  homeTeam?: 'A' | 'B' | null;
 }
 export interface GoalEvent {
   userId: number;

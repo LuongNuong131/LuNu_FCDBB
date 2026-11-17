@@ -49,6 +49,15 @@
             >
               {{ profile.name }}
             </h1>
+            <span
+              class="badge mt-3"
+              :class="profile.home_team === 'A' ? 'green' : 'blue'"
+              >{{
+                profile.home_team
+                  ? `Đội cố định ${profile.home_team}`
+                  : "Chưa phân đội cố định"
+              }}</span
+            >
             <div
               class="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start"
             >

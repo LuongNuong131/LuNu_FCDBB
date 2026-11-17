@@ -25,3 +25,9 @@ mobile:  [club             menu]
 Review: replaced generic dark glass and gold gradients with a light club operations workspace. The memorable element is a pitch drawing around the A/B scoreboard, not repeated decorated cards. Avoid invented metrics, promotional filler, uppercase labels, gratuitous motion and emoji icons. Existing profile, fund and blog screens adopt the same light tokens.
 
 Interaction: native labeled inputs, visible focus, at least 44px touch targets, keyboard dismissal of dialogs, reduced motion, meaningful empty/error states. Match records use saved player names; attendance and selected playing roster remain distinct concepts.
+
+## Themes and operational emphasis
+
+Light is the default; members can explicitly save a dark palette. Both modes share semantic surface/text/border tokens, with brighter labels and subdued pitch colors in dark mode. Photos retain their original colors. The theme is applied before app render.
+
+Venue and kickoff use separate fact blocks with a large value, date and Vietnam time zone. Player rows distinguish fixed team from the per-match playing team; temporary loans are written in text. The journal uses a featured story and photo mosaics, with a separate full-screen gallery and keyboard controls.

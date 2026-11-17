@@ -215,6 +215,9 @@ export class FootballService {
           userId: p.userId,
           team: p.team,
           name: snapshot?.name || user!.name,
+          homeTeam: snapshot
+            ? (snapshot.homeTeam ?? null)
+            : (user?.home_team ?? null),
         };
       });
       const goals: GoalEvent[] = data.goals.map((g: any) => {

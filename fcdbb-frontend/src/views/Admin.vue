@@ -228,7 +228,7 @@
         </div>
         <form
           @submit.prevent="createUser"
-          class="grid gap-4 md:grid-cols-4 items-end"
+          class="grid gap-4 md:grid-cols-5 items-end"
         >
           <label
             ><span class="field-label">Tài khoản</span
@@ -254,6 +254,18 @@
               class="field"
               required
               maxlength="150" /></label
+          ><label
+            ><span class="field-label">Đội cố định</span
+            ><select
+              v-model="newUser.home_team"
+              class="field"
+              aria-label="Đội cố định của thành viên mới"
+              required
+            >
+              <option value="" disabled>Chọn đội</option>
+              <option value="A">Đội A</option>
+              <option value="B">Đội B</option>
+            </select></label
           ><button class="btn" :disabled="saving">Tạo thành viên</button>
         </form>
       </section>
@@ -265,12 +277,17 @@
           type="search"
           placeholder="Tên hoặc tài khoản…"
       /></label>
+      <p class="team-assignment-note">
+        Đội cố định dùng làm mặc định khi nạp điểm danh. Muốn mượn cầu thủ để
+        cân bằng một buổi đá, chỉ chỉnh đội trong biên bản trận đó.
+      </p>
       <div class="table-shell">
         <table class="data-table">
           <thead>
             <tr>
               <th>Tài khoản</th>
               <th>Thành viên</th>
+              <th>Đội cố định</th>
               <th>Quyền truy cập</th>
               <th>Thao tác</th>
             </tr>
@@ -279,6 +296,19 @@
             <tr v-for="u in filteredUsers" :key="u.id">
               <td>{{ u.username }}</td>
               <td class="font-semibold">{{ u.name }}</td>
+              <td>
+                <select
+                  :value="u.home_team || ''"
+                  @change="saveHomeTeam(u, $event)"
+                  class="field"
+                  :aria-label="`Đội cố định của ${u.name}`"
+                  :disabled="saving"
+                >
+                  <option value="">Chưa phân đội</option>
+                  <option value="A">Đội A</option>
+                  <option value="B">Đội B</option>
+                </select>
+              </td>
               <td>
                 <select
                   :value="u.role"
@@ -315,7 +345,7 @@
               </td>
             </tr>
             <tr v-if="!filteredUsers.length">
-              <td colspan="4" class="muted">Không có thành viên phù hợp.</td>
+              <td colspan="5" class="muted">Không có thành viên phù hợp.</td>
             </tr>
           </tbody>
         </table>
@@ -353,7 +383,7 @@ const emptyMatch = () => ({
     end_time: "",
   }),
   match = ref(emptyMatch()),
-  newUser = ref({ username: "", password: "", name: "" });
+  newUser = ref({ username: "", password: "", name: "", home_team: "" });
 const load = async () => {
   try {
     const [m, u] = await Promise.all([api.get("/matches"), api.get("/users")]);
@@ -474,8 +504,31 @@ const deleteMatch = async (m) => {
 const createUser = () =>
   run(async () => {
     await api.post("/users", newUser.value);
-    newUser.value = { username: "", password: "", name: "" };
+    newUser.value = { username: "", password: "", name: "", home_team: "" };
   }, "Đã tạo thành viên.");
+const saveHomeTeam = async (u, event) => {
+  const select = event.target;
+  saving.value = true;
+  error.value = "";
+  try {
+    const { data } = await api.put(`/users/${u.id}/team`, {
+      home_team: select.value || null,
+    });
+    u.home_team = data.home_team;
+    addToast(
+      "Đã lưu đội cố định. Đội hình các trận đã lưu được giữ nguyên.",
+      "success",
+    );
+  } catch (e) {
+    select.value = u.home_team || "";
+    error.value =
+      e.response?.data?.message ||
+      "Không lưu được đội cố định. Vui lòng thử lại.";
+    addToast(error.value, "error");
+  } finally {
+    saving.value = false;
+  }
+};
 const saveRole = (u, role) =>
   run(() => api.put(`/users/${u.id}`, { role }), "Đã cập nhật quyền truy cập.");
 const resetPass = async (u) => {

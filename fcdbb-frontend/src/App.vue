@@ -26,6 +26,7 @@
           >
         </nav>
         <div class="member-actions">
+          <ThemeToggle />
           <router-link :to="`/profile/${user.id}`" class="member-link"
             ><span
               class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-800"
@@ -68,6 +69,7 @@
         >
       </nav>
     </header>
+    <header v-if="!user" class="guest-theme"><ThemeToggle /></header>
     <main id="main-content" class="app-content"><router-view /></main>
     <ToastPopup /><DialogPopup />
   </div>
@@ -77,6 +79,7 @@ import { ref, watch, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import ToastPopup from "./components/ToastPopup.vue";
 import DialogPopup from "./components/DialogPopup.vue";
+import ThemeToggle from "./components/ThemeToggle.vue";
 import ClubIcon from "./components/ClubIcon.vue";
 const router = useRouter(),
   route = useRoute(),

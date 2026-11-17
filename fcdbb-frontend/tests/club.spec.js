@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 test.describe.configure({ mode: "serial" });
 const API = "http://127.0.0.1:3001/api";
-let admin, season, editable, completed, players;
+let admin, season, editable, completed, players, albumPost;
 const headers = () => ({ Authorization: `Bearer ${admin.token}` });
 const past = {
   title: "Trận kiểm thử A/B",
@@ -30,7 +30,12 @@ test.beforeAll(async ({ request }) => {
       await (
         await request.post(`${API}/users`, {
           headers: headers(),
-          data: { username: `test${i}`, name, password: "test123456" },
+          data: {
+            username: `test${i}`,
+            name,
+            password: "test123456",
+            home_team: i < 2 ? "A" : "B",
+          },
         })
       ).json(),
     );
@@ -97,7 +102,7 @@ test("login, 12 recent matches, pagination, search and accessible home", async (
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Sẵn sàng cho trận tiếp theo." }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30000 });
   await expect(page.locator(".match-card")).toHaveCount(12);
   await page.getByRole("button", { name: "Trang sau" }).click();
   await expect(page.locator(".match-card")).toHaveCount(2);
@@ -233,4 +238,264 @@ test("375, 768, 1024 and 1440px layouts fit the viewport and mobile navigation w
       ).toBeVisible();
     }
   }
+});
+
+test("fixed teams prefill attendance; match loans and later permanent changes stay independent", async ({
+  page,
+  request,
+}) => {
+  const now = Date.now();
+  const createActive = async () =>
+    await (
+      await request.post(`${API}/matches`, {
+        headers: headers(),
+        data: {
+          ...past,
+          title: "Cân bằng đội theo buổi đá",
+          start_time: new Date(now - 600000),
+          lock_time: new Date(now + 60000),
+          end_time: new Date(now + 3600000),
+        },
+      })
+    ).json();
+  const active = await createActive();
+  const aToken = (
+    await (
+      await request.post(`${API}/auth/login`, {
+        data: { username: "test0", password: "test123456" },
+      })
+    ).json()
+  ).token;
+  const bToken = (
+    await (
+      await request.post(`${API}/auth/login`, {
+        data: { username: "test2", password: "test123456" },
+      })
+    ).json()
+  ).token;
+  for (const token of [aToken, bToken])
+    expect(
+      (
+        await request.post(`${API}/attendance/checkin`, {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { matchId: active.id, lat: 10.78, lng: 106.67 },
+        })
+      ).ok(),
+    ).toBe(true);
+  await signIn(page);
+  await page.goto(`/matches/${active.id}`);
+  await page.getByRole("button", { name: "Lập biên bản" }).click();
+  await expect(
+    page.getByLabel("Đội của Nguyễn An", { exact: true }),
+  ).toHaveValue("A");
+  await expect(page.getByLabel("Đội của Lê Chi", { exact: true })).toHaveValue(
+    "B",
+  );
+  await page.getByLabel("Đội của Nguyễn An", { exact: true }).selectOption("B");
+  await expect(
+    page.getByText("Đá cho B ở trận này", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Lưu biên bản", exact: true }).click();
+  await expect(
+    page.getByText("Đội cố định A · Đá cho B trận này"),
+  ).toBeVisible();
+  expect(
+    (
+      await (
+        await request.get(`${API}/users/${players[0].id}`, {
+          headers: headers(),
+        })
+      ).json()
+    ).home_team,
+  ).toBe("A");
+  const next = await createActive();
+  await request.post(`${API}/attendance/checkin`, {
+    headers: { Authorization: `Bearer ${aToken}` },
+    data: { matchId: next.id, lat: 10.78, lng: 106.67 },
+  });
+  await page.goto(`/matches/${next.id}`);
+  await page.getByRole("button", { name: "Lập biên bản" }).click();
+  await expect(
+    page.getByLabel("Đội của Nguyễn An", { exact: true }),
+  ).toHaveValue("A");
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "Thành viên", exact: true }).click();
+  await page
+    .getByLabel("Đội cố định của Nguyễn An", { exact: true })
+    .selectOption("B");
+  await expect(
+    page.getByLabel("Đội cố định của Nguyễn An", { exact: true }),
+  ).toBeEnabled();
+  await expect
+    .poll(
+      async () =>
+        (
+          await (
+            await request.get(`${API}/users/${players[0].id}`, {
+              headers: headers(),
+            })
+          ).json()
+        ).home_team,
+    )
+    .toBe("B");
+  const old = (
+    await (
+      await request.get(`${API}/matches/${active.id}/report`, {
+        headers: headers(),
+      })
+    ).json()
+  ).report;
+  expect(old.roster.find((p) => p.userId === players[0].id)).toMatchObject({
+    team: "B",
+    homeTeam: "A",
+  });
+});
+
+test("multi-photo blog supports cover, album navigation, retained photos and new uploads", async ({
+  page,
+  request,
+}) => {
+  const buffer = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=",
+    "base64",
+  );
+  const file = (n) => ({
+    name: `photo-${n}.png`,
+    mimeType: "image/png",
+    buffer,
+  });
+  await signIn(page);
+  await page.goto("/blog");
+  await page.getByRole("button", { name: "Viết bài mới" }).click();
+  await page
+    .getByLabel("Tiêu đề", { exact: true })
+    .fill("Album một tối cùng đồng đội");
+  await page.getByLabel("Mô tả ngắn").fill("Những pha bóng đáng nhớ");
+  await page
+    .getByLabel("Câu chuyện", { exact: true })
+    .fill("Một buổi đá thật vui.");
+  await page
+    .getByLabel("Thêm ảnh cho bài viết")
+    .setInputFiles([file(1), file(2), file(3)]);
+  await expect(page.locator(".photo-editor-item")).toHaveCount(3);
+  const second = await page
+    .locator(".photo-editor-item img")
+    .nth(1)
+    .getAttribute("src");
+  await page.getByRole("button", { name: "Đặt làm ảnh bìa" }).first().click();
+  await expect(page.locator(".photo-editor-item img").first()).toHaveAttribute(
+    "src",
+    second,
+  );
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page
+    .getByRole("button", { name: "Đăng bài viết", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Album một tối cùng đồng đội" }),
+  ).toBeVisible();
+  albumPost = (
+    await (await request.get(`${API}/blog`, { headers: headers() })).json()
+  ).find((p) => p.title === "Album một tối cùng đồng đội");
+  expect(albumPost.images).toHaveLength(3);
+  await page
+    .getByRole("button", { name: "Xem album (3 ảnh)", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByText("Ảnh 1 / 3", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Ảnh tiếp theo", exact: true })
+    .click();
+  await expect(page.getByText("Ảnh 2 / 3", { exact: true })).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByText("Ảnh 3 / 3", { exact: true })).toBeVisible();
+  const photoDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Tải hình ảnh", exact: true }).click();
+  expect((await photoDownload).suggestedFilename()).toMatch(/\.png$/);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await page.getByRole("button", { name: "Sửa bài viết", exact: true }).click();
+  await page.getByRole("button", { name: "Bỏ ảnh 2", exact: true }).click();
+  await page.getByLabel("Thêm ảnh cho bài viết").setInputFiles([file(4)]);
+  await page.getByRole("button", { name: "Lưu thay đổi", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Album một tối cùng đồng đội" }),
+  ).toBeVisible();
+  const updated = (
+    await (await request.get(`${API}/blog`, { headers: headers() })).json()
+  ).find((p) => p.id === albumPost.id);
+  expect(updated.images).toHaveLength(3);
+  expect(updated.images).not.toContain(albumPost.images[1]);
+  expect(updated.images[0]).toBe(albumPost.images[0]);
+  albumPost = updated;
+});
+
+test("light/dark preference persists and key pages remain accessible in both themes", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.getByRole("button", { name: "Chuyển sang nền tối" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  for (const path of [
+    "/",
+    "/matches",
+    `/matches/${completed.id}`,
+    "/players",
+    "/funds",
+    "/profile/1",
+    "/admin",
+    "/blog",
+  ]) {
+    await page.goto(path);
+    await expect(page.locator("h1")).toBeVisible();
+    expect(
+      (await new AxeBuilder({ page }).analyze()).violations,
+      `${path} dark accessibility`,
+    ).toEqual([]);
+    await page.setViewportSize({ width: 375, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+      ),
+      `${path} mobile dark should fit`,
+    ).toBe(true);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    if (["/", "/blog"].includes(path))
+      await page.screenshot({
+        path: `test-results/${path === "/" ? "home" : "blog"}-dark.png`,
+        fullPage: true,
+      });
+  }
+  await page.getByRole("button", { name: "Chuyển sang nền sáng" }).click();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({
+    path: "test-results/blog-light.png",
+    fullPage: true,
+  });
+});
+
+test("deleting a blog article removes its complete album", async ({
+  page,
+  request,
+}) => {
+  await signIn(page);
+  await page.goto("/blog");
+  await page.getByRole("button", { name: "Xóa bài viết", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Xóa bài viết", exact: true })
+    .click();
+  await expect(page.locator(".journal-post")).toHaveCount(0);
+  for (const url of albumPost.images)
+    expect((await request.get(`http://127.0.0.1:3001${url}`)).status()).toBe(
+      404,
+    );
 });

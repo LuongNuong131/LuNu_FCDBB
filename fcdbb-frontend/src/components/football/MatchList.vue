@@ -62,11 +62,23 @@
                   : 'blue'
             "
             >{{ matchStatus(m) }}</span
-          ><span class="muted">{{ formatVietnamDate(m.start_time) }}</span>
+          ><span class="match-card-date">{{
+            formatVietnamDate(m.start_time)
+          }}</span>
         </div>
         <h3>{{ m.title }}</h3>
         <p class="muted text-xs mb-0">
           {{ m.season?.name || "Chưa gắn mùa giải" }}
+        </p>
+        <p class="match-card-schedule">
+          <ClubIcon name="clock" />{{
+            formatVietnamDateTime(m.start_time, {
+              day: undefined,
+              month: undefined,
+              year: undefined,
+              second: undefined,
+            })
+          }}
         </p>
         <div class="match-score">
           <span class="flex items-center gap-2 text-xs font-semibold"
@@ -81,7 +93,7 @@
           >
         </div>
         <div class="match-card-foot">
-          <span class="truncate">{{ m.location_name }}</span
+          <span class="match-location">{{ m.location_name }}</span
           ><span class="flex shrink-0 items-center gap-1"
             >{{ m.report?.roster?.length || 0 }} cầu thủ <ClubIcon name="arrow"
           /></span>
@@ -123,7 +135,7 @@
 import { ref, watch, onMounted, onUnmounted } from "vue";
 import api from "../../api";
 import ClubIcon from "../ClubIcon.vue";
-import { formatVietnamDate } from "../../utils/datetime";
+import { formatVietnamDate, formatVietnamDateTime } from "../../utils/datetime";
 import { matchStatus } from "../../utils/football";
 const props = defineProps({
   initialStatus: { type: String, default: "" },

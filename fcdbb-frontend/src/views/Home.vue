@@ -40,25 +40,7 @@
           <h2 class="text-xl font-bold mb-3">
             {{ activeMatch?.title || "Hẹn gặp nhau trên sân." }}
           </h2>
-          <div
-            v-if="activeMatch"
-            class="flex flex-wrap gap-x-5 gap-y-2 text-xs"
-          >
-            <span class="flex items-center gap-2"
-              ><ClubIcon name="calendar" />{{
-                formatVietnamDateTime(activeMatch.start_time)
-              }}</span
-            ><a
-              v-if="activeMatch.map_link"
-              :href="activeMatch.map_link"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="flex items-center gap-2 underline"
-              ><ClubIcon name="pin" />{{ activeMatch.location_name }}</a
-            ><span v-else class="flex items-center gap-2"
-              ><ClubIcon name="pin" />{{ activeMatch.location_name }}</span
-            >
-          </div>
+          <MatchFacts v-if="activeMatch" :match="activeMatch" />
           <p v-else class="muted text-sm">
             {{
               loading
@@ -172,6 +154,7 @@
 import { ref, computed, onMounted } from "vue";
 import api from "../api";
 import ClubIcon from "../components/ClubIcon.vue";
+import MatchFacts from "../components/football/MatchFacts.vue";
 import MatchList from "../components/football/MatchList.vue";
 import { formatVietnamDateTime } from "../utils/datetime";
 import { useToast } from "../composables/useToast";

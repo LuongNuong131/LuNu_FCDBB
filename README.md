@@ -17,7 +17,7 @@
 
 ## Nâng cấp quản lý đội bóng A/B
 
-Giao diện sáng thống nhất trên desktop/mobile, trang chủ 12 trận mỗi trang (chọn tối đa 48), tìm kiếm và lọc lịch sử. Mỗi trận có biên bản riêng: mùa giải, đội hình A/B, tỉ số, bàn thắng/kiến tạo/phản lưới, MVP, ghi chú, điểm danh GPS và nhật ký chỉnh sửa. Thêm bảng xếp hạng mùa giải, thống kê cầu thủ, xuất CSV, phân quyền API và CI tự động.
+Giao diện sáng/tối thống nhất trên desktop/mobile (ghi nhớ lựa chọn), đội cố định A/B do admin cấu hình và điều chỉnh đội riêng cho từng trận, blog album nhiều ảnh, trang chủ 12 trận mỗi trang (chọn tối đa 48), tìm kiếm và lọc lịch sử. Mỗi trận có biên bản riêng: mùa giải, đội hình A/B, tỉ số, bàn thắng/kiến tạo/phản lưới, MVP, ghi chú, điểm danh GPS và nhật ký chỉnh sửa. Thêm bảng xếp hạng mùa giải, thống kê cầu thủ, xuất CSV, phân quyền API và CI tự động.
 
 **[Hướng dẫn đầy đủ, API, schema và triển khai](docs/club-management.md)** · [Design system](docs/design-system.md)
 
@@ -50,17 +50,17 @@ Phiên bản hiện tại được tổ chức theo mô hình **frontend–backe
 
 ## Điểm nổi bật
 
-| Khu vực               | Chức năng                                                                  |
-| --------------------- | -------------------------------------------------------------------------- |
-| **Trang chủ**         | Hiển thị trận đang hoạt động, lịch sử gần nhất và trạng thái điểm danh.    |
-| **Hồ sơ cầu thủ**     | Quản lý thông tin cá nhân, chỉ số thể chất, vị trí, avatar và mật khẩu.    |
-| **Danh sách cầu thủ** | Tra cứu thành viên, vai trò và thông tin cơ bản trong đội.                 |
-| **Lịch thi đấu**      | Tạo, cập nhật, xóa trận đấu; quản lý địa điểm và các mốc thời gian.        |
-| **Điểm danh**         | Xác thực thời gian, khoảng cách tới sân và trạng thái đúng giờ/đi muộn.    |
-| **Quỹ đội**           | Theo dõi khoản thu, khoản chi, lý do và ảnh minh chứng.                    |
-| **Blog nội bộ**       | Đọc bài viết; admin tạo, sửa, xóa bài và tải ảnh minh họa.                 |
-| **Xác thực**          | Đăng nhập bằng JWT, phân quyền admin/user và băm mật khẩu bằng bcrypt.     |
-| **Lưu trữ ảnh**       | Local storage khi phát triển; Supabase Storage khi có cấu hình production. |
+| Khu vực               | Chức năng                                                                                                         |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Trang chủ**         | Hiển thị trận đang hoạt động, lịch sử gần nhất và trạng thái điểm danh.                                           |
+| **Hồ sơ cầu thủ**     | Quản lý thông tin cá nhân, chỉ số thể chất, vị trí, avatar và mật khẩu.                                           |
+| **Danh sách cầu thủ** | Tra cứu thành viên, vai trò và thông tin cơ bản trong đội.                                                        |
+| **Lịch thi đấu**      | Tạo, cập nhật, xóa trận đấu; quản lý địa điểm và các mốc thời gian.                                               |
+| **Điểm danh**         | Xác thực thời gian, khoảng cách tới sân và trạng thái đúng giờ/đi muộn.                                           |
+| **Quỹ đội**           | Theo dõi khoản thu, khoản chi, lý do và ảnh minh chứng.                                                           |
+| **Blog nội bộ**       | Đọc bài viết; admin tạo, sửa, xóa bài và quản lý album tối đa 12 ảnh, chọn ảnh bìa, sắp xếp và xem toàn màn hình. |
+| **Xác thực**          | Đăng nhập bằng JWT, phân quyền admin/user và băm mật khẩu bằng bcrypt.                                            |
+| **Lưu trữ ảnh**       | Local storage khi phát triển; Supabase Storage khi có cấu hình production.                                        |
 
 ## Kiến trúc hệ thống
 
