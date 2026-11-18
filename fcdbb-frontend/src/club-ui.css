@@ -83,11 +83,9 @@ html {
 }
 @keyframes sheet-reveal {
   from {
-    opacity: 0;
     transform: translateY(16px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -134,7 +132,7 @@ html {
   display: block;
   overflow-wrap: anywhere;
 }
-.sheet-member span span {
+.sheet-member > span:not(.club-avatar) > span {
   display: block;
   color: var(--muted);
   font-size: 11px;
