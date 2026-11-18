@@ -3,15 +3,19 @@
     class="login-layout mx-auto grid min-h-[calc(100vh-140px)] max-w-5xl items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-20"
   >
     <section class="login-story">
-      <router-link to="/login" class="brand mb-10"
-        ><span class="brand-mark">ĐB</span
-        ><span
-          ><span class="brand-wordmark">FC Đá Bay Bóng</span
-          ><span class="brand-subtitle"
-            >Không gian dành riêng cho đội bóng</span
-          ></span
-        ></router-link
-      >
+      <router-link to="/login" class="brand mb-10">
+        <img
+          class="brand-mark"
+          src="/fcdbb-logo.svg"
+          alt=""
+          width="42"
+          height="42"
+        />
+        <span>
+          <span class="brand-wordmark">FC Đá Bay Bóng</span>
+          <span class="brand-subtitle">Không gian dành riêng cho đội bóng</span>
+        </span>
+      </router-link>
       <div class="pitch">
         <div class="pitch-lines"></div>
         <div class="pitch-content">

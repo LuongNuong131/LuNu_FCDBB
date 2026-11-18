@@ -127,18 +127,13 @@ input[type="checkbox"] {
   flex-shrink: 0;
 }
 .brand-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 42px;
-  height: 46px;
+  height: 42px;
   flex-shrink: 0;
-  border-radius: 10px 10px 17px 17px;
-  background: var(--action);
-  color: white;
-  font-weight: 800;
-  font-size: 19px;
-  letter-spacing: -1px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8f6eb;
 }
 .brand-wordmark {
   display: block;
@@ -845,11 +840,6 @@ table {
   }
   .brand-wordmark {
     font-size: 12px;
-  }
-  .brand-mark {
-    width: 36px;
-    height: 40px;
-    font-size: 16px;
   }
   .app-content {
     padding: 24px 16px 40px;

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>FC Đá Bay Bóng</title>
+  <defs>
+    <clipPath id="ball-panel-area">
+      <circle cx="182" cy="85" r="49"/>
+    </clipPath>
+  </defs>
+  <path fill="#92E4B6" d="M10 228 157 123 201 140Z"/>
+  <path fill="#157251" d="M21 203 127 77 153 108Z"/>
+  <circle cx="182" cy="85" r="59" fill="#157251"/>
+  <circle cx="182" cy="85" r="49" fill="#F8F6EB"/>
+  <path fill="#157251" clip-path="url(#ball-panel-area)" d="M176 32h9l-2 25ZM130 58l32 16-35-7ZM233 57l4 10-31 7ZM225 115l-8 9-19-24ZM145 124l-8-8 31-16Z"/>
+  <path fill="#193347" d="M183 57 207 74 197 99H170l-9-25Z"/>
+</svg>

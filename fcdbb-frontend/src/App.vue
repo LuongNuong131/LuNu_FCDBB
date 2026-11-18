@@ -4,7 +4,13 @@
     <header v-if="user" class="topbar">
       <div class="header-inner">
         <router-link to="/" class="brand">
-          <span class="brand-mark">ĐB</span>
+          <img
+            class="brand-mark"
+            src="/fcdbb-logo.svg"
+            alt=""
+            width="42"
+            height="42"
+          />
           <span
             ><span class="brand-wordmark">FC Đá Bay Bóng</span
             ><span class="brand-subtitle"
