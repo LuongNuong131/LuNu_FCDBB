@@ -13,6 +13,7 @@
 
 - Trang chủ mặc định có **12 trận đã qua/trang**; chọn 6/12/24/48 trận. Tìm theo tên trận/sân, lọc mùa giải hoặc trạng thái, chuyển trang để xem toàn bộ lịch sử.
 - Chi tiết trận hiển thị đội hình A/B, tỉ số, bên thắng/hòa, diễn biến bàn thắng, MVP, ghi chú và điểm danh GPS: tên, thời điểm, khoảng cách, trạng thái, số giây đi muộn.
+- Phần **Đội hình thực tế** mặc định chỉ liệt kê cầu thủ đã điểm danh ở trận đang xem, cùng các cầu thủ đã có trong biên bản. Người chưa có điểm danh chỉ được chọn qua nút **Thêm cầu thủ**; chọn đội A/B sẽ bổ sung riêng cho trận, không tạo điểm danh và không đổi đội cố định. Cầu thủ điểm danh nhưng chưa phân đội vẫn hiện để admin chọn đội thủ công. Tìm kiếm trong danh sách chính chỉ lọc cầu thủ của trận; danh sách bổ sung có ô tìm kiếm riêng.
 - **Đội hình thi đấu** và **điểm danh** là hai dữ liệu riêng: đến sân không đồng nghĩa chắc chắn được xếp vào đội hình. “Nạp người đã điểm danh” dùng đội cố định do admin cấu hình. Khi lập biên bản trống, những người đã điểm danh và đã phân đội được nạp sẵn; admin có thể điều chỉnh riêng cho trận.
 - Bảng xếp hạng: thắng 3 điểm, hòa 1, thua 0. Đồng điểm xét hiệu số rồi số bàn thắng. Phong độ hiển thị 5 trận mới nhất, từ trái sang phải.
 - Thống kê cầu thủ gồm số trận ra sân, bàn thắng, kiến tạo, MVP và số trận thắng. Bàn phản lưới tính cho đối phương, không tính vào thành tích ghi bàn của cầu thủ.

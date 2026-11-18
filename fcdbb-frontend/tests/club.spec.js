@@ -117,8 +117,15 @@ test("admin records both teams, goal, result and audit; exports CSV and updates 
   await signIn(page);
   await page.goto(`/matches/${editable.id}`);
   await page.getByRole("button", { name: "Lập biên bản" }).click();
-  await page.getByLabel("Đội của Nguyễn An").selectOption("A");
-  await page.getByLabel("Đội của Trần Bình").selectOption("B");
+  await expect(page.locator(".editor-player")).toHaveCount(0);
+  await page.getByRole("button", { name: "Thêm cầu thủ", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Thêm Nguyễn An vào đội A", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Thêm cầu thủ", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Thêm Trần Bình vào đội B", exact: true })
+    .click();
   await page
     .getByLabel("Mùa giải", { exact: true })
     .selectOption(String(season.id));
@@ -769,12 +776,10 @@ test("mobile navigation, compact filters and record cards support complete daily
     .getByRole("button", { name: "Tạo lịch trận", exact: true })
     .click();
   await expect(
-    page
-      .locator(".admin-fixtures")
-      .getByRole("heading", {
-        name: "Buổi đá thêm từ điện thoại",
-        exact: true,
-      }),
+    page.locator(".admin-fixtures").getByRole("heading", {
+      name: "Buổi đá thêm từ điện thoại",
+      exact: true,
+    }),
   ).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await page
@@ -839,4 +844,197 @@ test("mobile navigation, compact filters and record cards support complete daily
   await expect(saveBar).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.screenshot({ path: "test-results/report-editor-mobile.png" });
+});
+
+test("actual lineup shows this match's attendees; extra players are added explicitly and preserved", async ({
+  page,
+  request,
+}) => {
+  const unassigned = await (
+    await request.post(`${API}/users`, {
+      headers: headers(),
+      data: {
+        username: "roster-unassigned",
+        name: "Phạm Chưa Phân Đội",
+        password: "test123456",
+      },
+    })
+  ).json();
+  const now = Date.now();
+  const match = await (
+    await request.post(`${API}/matches`, {
+      headers: headers(),
+      data: {
+        ...past,
+        title: "Đội hình theo điểm danh",
+        start_time: new Date(now - 600000),
+        lock_time: new Date(now + 300000),
+        end_time: new Date(now + 3600000),
+      },
+    })
+  ).json();
+  for (const username of ["test1", unassigned.username]) {
+    const login = await (
+      await request.post(`${API}/auth/login`, {
+        data: { username, password: "test123456" },
+      })
+    ).json();
+    expect(
+      (
+        await request.post(`${API}/attendance/checkin`, {
+          headers: { Authorization: `Bearer ${login.token}` },
+          data: { matchId: match.id, lat: 10.78, lng: 106.67 },
+        })
+      ).ok(),
+    ).toBe(true);
+  }
+  await signIn(page);
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto(`/matches/${match.id}`);
+  await page.getByRole("button", { name: "Lập biên bản", exact: true }).click();
+  await expect(page.locator(".editor-player")).toHaveCount(2);
+  await expect(
+    page.getByLabel("Đội của Trần Bình", { exact: true }),
+  ).toHaveValue("A");
+  await expect(
+    page.getByLabel(`Đội của ${unassigned.name}`, { exact: true }),
+  ).toHaveValue("");
+  await expect(page.getByLabel("Đội của Võ Dũng", { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByLabel("Đội của Nguyễn An", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("region", {
+      name: "Thêm cầu thủ chưa điểm danh",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page.getByLabel("Tìm cầu thủ để chia đội").fill("Võ Dũng");
+  await expect(page.locator(".editor-player")).toHaveCount(0);
+  await expect(
+    page.getByText("Không tìm thấy cầu thủ trong danh sách trận.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByLabel("Tìm cầu thủ để chia đội").fill("");
+  await page.getByRole("button", { name: "Thêm cầu thủ", exact: true }).click();
+  const picker = page.getByRole("region", {
+    name: "Thêm cầu thủ chưa điểm danh",
+    exact: true,
+  });
+  await expect(picker).toBeFocused();
+  await expect(
+    picker.getByRole("heading", {
+      name: "Cầu thủ chưa điểm danh",
+      exact: true,
+    }),
+  ).toBeInViewport();
+  await expect(
+    picker.getByRole("button", {
+      name: "Thêm Trần Bình vào đội A",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page.getByLabel("Tìm cầu thủ chưa điểm danh").fill("Võ Dũng");
+  await expect(picker.locator(".extra-player-row")).toHaveCount(1);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/roster-extra-picker-mobile.png",
+  });
+  await page.keyboard.press("Escape");
+  await expect(picker).toHaveCount(0);
+  const add = page.getByRole("button", { name: "Thêm cầu thủ", exact: true });
+  await expect(add).toBeFocused();
+  await page.getByLabel("Tìm cầu thủ để chia đội").fill("Trần");
+  await add.click();
+  await page
+    .getByRole("button", { name: "Thêm Võ Dũng vào đội A", exact: true })
+    .click();
+  await expect(picker).toHaveCount(0);
+  await expect(add).toBeFocused();
+  await expect(page.locator(".editor-player")).toHaveCount(3);
+  await expect(page.getByLabel("Đội của Võ Dũng", { exact: true })).toHaveValue(
+    "A",
+  );
+  await expect(
+    page.getByText("Đá cho A ở trận này", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByLabel(`Đội của ${unassigned.name}`, { exact: true })
+    .selectOption("B");
+  await add.click();
+  await expect(
+    picker.getByRole("button", { name: "Thêm Võ Dũng vào đội A", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Đóng danh sách bổ sung", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Nạp người đã điểm danh", exact: true })
+    .click();
+  await expect(page.locator(".editor-player")).toHaveCount(3);
+  await page.getByRole("button", { name: "Chuyển sang nền tối" }).click();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.locator("#report-roster").scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: "test-results/roster-attendees-mobile-dark.png",
+  });
+  await page.getByRole("button", { name: "Lưu biên bản", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Chỉnh sửa biên bản", exact: true }),
+  ).toBeVisible();
+  const saved = await (
+    await request.get(`${API}/matches/${match.id}/report`, {
+      headers: headers(),
+    })
+  ).json();
+  expect(saved.report.roster).toHaveLength(3);
+  expect(
+    saved.report.roster.find((p) => p.userId === players[3].id),
+  ).toMatchObject({ team: "A", homeTeam: "B" });
+  const details = await (
+    await request.get(`${API}/matches/${match.id}/details`, {
+      headers: headers(),
+    })
+  ).json();
+  expect(details.attendances).toHaveLength(2);
+  expect(details.attendances.some((a) => a.user.id === players[3].id)).toBe(
+    false,
+  );
+  expect(
+    (
+      await (
+        await request.get(`${API}/users/${players[3].id}`, {
+          headers: headers(),
+        })
+      ).json()
+    ).home_team,
+  ).toBe("B");
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Chỉnh sửa biên bản", exact: true })
+    .click();
+  await expect(page.locator(".editor-player")).toHaveCount(3);
+  await expect(page.getByLabel("Đội của Võ Dũng", { exact: true })).toHaveValue(
+    "A",
+  );
+  await expect(picker).toHaveCount(0);
+  await page.getByLabel("Đội của Võ Dũng", { exact: true }).selectOption("");
+  await expect(page.locator(".editor-player")).toHaveCount(2);
+  await page.getByLabel("Đội của Trần Bình", { exact: true }).selectOption("");
+  await expect(page.locator(".editor-player")).toHaveCount(2);
+  await expect(
+    page.getByLabel("Đội của Trần Bình", { exact: true }),
+  ).toHaveValue("");
+  await add.click();
+  await expect(
+    picker.getByRole("button", { name: "Thêm Võ Dũng vào đội B", exact: true }),
+  ).toBeVisible();
 });

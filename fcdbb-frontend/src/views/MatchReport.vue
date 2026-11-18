@@ -139,19 +139,32 @@
         </div>
         <div id="report-roster" class="section-head mt-7">
           <h2>Đội hình thực tế</h2>
-          <button
-            type="button"
-            class="btn secondary"
-            @click="importAttendance"
-            :disabled="!details.attendances?.length"
-          >
-            Nạp người đã điểm danh
-          </button>
+          <div class="roster-actions">
+            <button
+              type="button"
+              class="btn secondary"
+              @click="importAttendance"
+              :disabled="!details.attendances?.length"
+            >
+              Nạp người đã điểm danh
+            </button>
+            <button
+              ref="addPlayerButton"
+              type="button"
+              class="btn secondary"
+              :aria-expanded="showPlayerPicker"
+              aria-controls="extra-match-players"
+              @click="togglePlayerPicker"
+            >
+              <ClubIcon name="plus" />Thêm cầu thủ
+            </button>
+          </div>
         </div>
         <p class="team-assignment-note mb-3">
-          Đội cố định do admin cấu hình. Nạp điểm danh để lấy đội mặc định, rồi
-          chuyển cầu thủ sang đội đối diện khi cần cân bằng quân số. Thay đổi ở
-          đây chỉ áp dụng cho trận này.
+          Mặc định chỉ hiện cầu thủ đã điểm danh và những người đã được thêm vào
+          biên bản. Đội cố định được dùng để nạp điểm danh; đổi đội ở đây chỉ áp
+          dụng cho trận này. Muốn bổ sung người chưa điểm danh, chọn “Thêm cầu
+          thủ”.
         </p>
         <label class="block mb-3"
           ><span class="field-label">Tìm cầu thủ để chia đội</span
@@ -186,6 +199,14 @@
                   : "Chưa phân đội cố định"
               }}</span
               ><span
+                class="badge mt-1"
+                :class="attendeeIds.has(p.id) ? 'green' : 'blue'"
+                >{{
+                  attendeeIds.has(p.id)
+                    ? "Đã điểm danh"
+                    : "Bổ sung ngoài điểm danh"
+                }}</span
+              ><span
                 v-if="
                   p.home_team &&
                   draft.roster.find((x) => x.userId === p.id)?.team &&
@@ -209,6 +230,88 @@
             </select></label
           >
         </div>
+        <p v-if="!filteredPlayers.length" class="empty-state !py-6 mt-3">
+          {{
+            playerSearch
+              ? "Không tìm thấy cầu thủ trong danh sách trận."
+              : "Chưa có cầu thủ điểm danh trong trận này. Chọn “Thêm cầu thủ” để bổ sung người tham gia."
+          }}
+        </p>
+        <section
+          v-if="showPlayerPicker"
+          id="extra-match-players"
+          ref="playerPicker"
+          class="extra-player-picker"
+          tabindex="-1"
+          aria-label="Thêm cầu thủ chưa điểm danh"
+          @keydown.esc.stop.prevent="closePlayerPicker"
+        >
+          <div class="section-head">
+            <div>
+              <h3>Cầu thủ chưa điểm danh</h3>
+              <p class="hint">
+                Chọn đội A hoặc B để thêm riêng vào trận này. Thao tác này không
+                tạo lượt điểm danh và không đổi đội cố định.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="icon-btn"
+              aria-label="Đóng danh sách bổ sung"
+              @click="closePlayerPicker"
+            >
+              <ClubIcon name="close" />
+            </button>
+          </div>
+          <label class="block mb-3"
+            ><span class="field-label">Tìm cầu thủ chưa điểm danh</span
+            ><input
+              v-model="extraPlayerSearch"
+              type="search"
+              class="field"
+              placeholder="Tên cầu thủ cần bổ sung…"
+          /></label>
+          <div class="extra-player-list">
+            <div
+              v-for="p in extraCandidates"
+              :key="p.id"
+              class="extra-player-row"
+            >
+              <div class="min-w-0">
+                <strong>{{ p.name }}</strong
+                ><span class="block text-xs muted">{{
+                  p.home_team
+                    ? `Đội cố định ${p.home_team}`
+                    : "Chưa phân đội cố định"
+                }}</span>
+              </div>
+              <div class="extra-team-actions">
+                <button
+                  type="button"
+                  class="btn secondary"
+                  :aria-label="`Thêm ${p.name} vào đội A`"
+                  @click="addExtraPlayer(p, 'A')"
+                >
+                  Đội A</button
+                ><button
+                  type="button"
+                  class="btn secondary"
+                  :aria-label="`Thêm ${p.name} vào đội B`"
+                  @click="addExtraPlayer(p, 'B')"
+                >
+                  Đội B
+                </button>
+              </div>
+            </div>
+          </div>
+          <p v-if="!extraCandidates.length" class="hint py-4">
+            {{
+              extraPlayerSearch
+                ? "Không tìm thấy cầu thủ phù hợp."
+                : "Không còn cầu thủ chưa điểm danh để bổ sung."
+            }}
+          </p>
+        </section>
         <div id="report-goals" class="section-head mt-7">
           <div>
             <h2>Bàn thắng & kiến tạo</h2>
@@ -584,7 +687,7 @@
   </div>
 </template>
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { useRoute, onBeforeRouteLeave } from "vue-router";
 import api from "../api";
 import MatchFacts from "../components/football/MatchFacts.vue";
@@ -609,6 +712,10 @@ const match = ref(null),
   editing = ref(false),
   draft = ref({ roster: [], goals: [] }),
   playerSearch = ref(""),
+  extraPlayerSearch = ref(""),
+  showPlayerPicker = ref(false),
+  addPlayerButton = ref(null),
+  playerPicker = ref(null),
   saving = ref(false),
   saveError = ref("");
 const load = async () => {
@@ -638,22 +745,73 @@ const load = async () => {
   }
 };
 watch(() => route.params.id, load, { immediate: true });
-const availablePlayers = computed(() => [
-  ...users.value,
-  ...report.value.roster
-    .filter((p) => !users.value.some((u) => u.id === p.userId))
-    .map((p) => ({ id: p.userId, name: p.name, home_team: p.homeTeam })),
-]);
+const attendeeIds = computed(
+  () => new Set((details.value.attendances || []).map((a) => a.user.id)),
+);
+const availablePlayers = computed(() => {
+  const byId = new Map(users.value.map((p) => [p.id, p]));
+  for (const a of details.value.attendances || []) {
+    if (!byId.has(a.user.id)) byId.set(a.user.id, a.user);
+  }
+  for (const p of report.value.roster) {
+    if (!byId.has(p.userId))
+      byId.set(p.userId, { id: p.userId, name: p.name, home_team: p.homeTeam });
+  }
+  return [...byId.values()];
+});
+const matchPlayers = computed(() =>
+  availablePlayers.value
+    .filter(
+      (p) =>
+        attendeeIds.value.has(p.id) ||
+        draft.value.roster.some((entry) => entry.userId === p.id),
+    )
+    .map((p) => ({
+      ...p,
+      name:
+        draft.value.roster.find((entry) => entry.userId === p.id)?.name ||
+        p.name,
+    })),
+);
+const matchesPlayerSearch = (name, query) =>
+  name.toLocaleLowerCase("vi").includes(query.trim().toLocaleLowerCase("vi"));
 const filteredPlayers = computed(() =>
-  availablePlayers.value.filter((p) =>
-    p.name
-      .toLocaleLowerCase("vi")
-      .includes(playerSearch.value.toLocaleLowerCase("vi")),
+  matchPlayers.value.filter((p) =>
+    matchesPlayerSearch(p.name, playerSearch.value),
   ),
 );
+const extraCandidates = computed(() =>
+  availablePlayers.value.filter(
+    (p) =>
+      !attendeeIds.value.has(p.id) &&
+      !draft.value.roster.some((entry) => entry.userId === p.id) &&
+      matchesPlayerSearch(p.name, extraPlayerSearch.value),
+  ),
+);
+const closePlayerPicker = async () => {
+  showPlayerPicker.value = false;
+  extraPlayerSearch.value = "";
+  await nextTick();
+  addPlayerButton.value?.focus();
+};
+const togglePlayerPicker = async () => {
+  if (showPlayerPicker.value) return closePlayerPicker();
+  showPlayerPicker.value = true;
+  extraPlayerSearch.value = "";
+  await nextTick();
+  playerPicker.value?.focus({ preventScroll: true });
+  playerPicker.value?.scrollIntoView({ block: "start", behavior: "auto" });
+};
+const addExtraPlayer = (p, team) => {
+  playerSearch.value = "";
+  setTeam(p, team);
+  closePlayerPicker();
+};
 const beginEdit = () => {
   draft.value = JSON.parse(JSON.stringify({ ...report.value, reason: "" }));
   playerSearch.value = "";
+  extraPlayerSearch.value = "";
+  showPlayerPicker.value = false;
   saveError.value = "";
   editing.value = true;
   if (!draft.value.roster.length) importAttendance();

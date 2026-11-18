@@ -83,11 +83,9 @@ html {
 }
 @keyframes sheet-reveal {
   from {
-    opacity: 0;
     transform: translateY(16px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -134,7 +132,7 @@ html {
   display: block;
   overflow-wrap: anywhere;
 }
-.sheet-member span span {
+.sheet-member > span:not(.club-avatar) > span {
   display: block;
   color: var(--muted);
   font-size: 11px;
@@ -1396,4 +1394,95 @@ html {
 .time-parts select {
   font-variant-numeric: tabular-nums;
   padding-left: 12px;
+}
+
+.roster-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.roster-actions .btn {
+  font-size: 12px;
+}
+.extra-player-picker {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--input-line);
+  background: var(--surface-soft);
+  border-radius: 14px;
+  scroll-margin-top: 100px;
+}
+.extra-player-picker .section-head {
+  align-items: flex-start;
+  flex-wrap: nowrap;
+}
+.extra-player-picker .section-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.extra-player-picker .section-head > .icon-btn {
+  flex-shrink: 0;
+}
+.extra-player-picker h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.extra-player-list {
+  max-height: 360px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.extra-player-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.extra-player-row:last-child {
+  border-bottom: 0;
+}
+.extra-player-row strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.extra-team-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.extra-team-actions .btn {
+  padding: 9px 13px;
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .roster-actions {
+    width: 100%;
+  }
+  .roster-actions .btn {
+    flex: 1 1 140px;
+  }
+  .extra-player-picker {
+    padding: 16px;
+  }
+  .extra-player-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .extra-team-actions {
+    width: 100%;
+  }
+  .extra-team-actions .btn {
+    flex: 1;
+  }
+  .editor-player select {
+    width: 112px;
+    flex-shrink: 0;
+  }
+  .editor-player .badge {
+    white-space: normal;
+    font-size: 10px;
+  }
 }
