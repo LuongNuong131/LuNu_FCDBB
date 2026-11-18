@@ -80,6 +80,17 @@
               class="btn secondary"
               ><ClubIcon name="plus" />Lên lịch buổi đá</router-link
             >
+            <p
+              v-if="activeMatch?.checkin_open_time"
+              class="text-xs muted mt-3 mb-0"
+            >
+              Có thể điểm danh từ
+              {{
+                formatVietnamDateTime(activeMatch.checkin_open_time, {
+                  second: undefined,
+                })
+              }}.
+            </p>
             <p v-if="activeMatch" class="hint">
               Điểm danh trong bán kính 50m. Mốc tính đi muộn:
               {{ formatVietnamDateTime(activeMatch.lock_time) }}.

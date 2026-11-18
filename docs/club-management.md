@@ -2,7 +2,7 @@
 
 ## Quy trình sử dụng
 
-1. **Quản trị → Lịch trận:** tạo lịch sân và ba mốc giờ Việt Nam. Có thể nhập trận đã qua để bổ sung lịch sử.
+1. **Quản trị → Lịch trận:** chọn giờ bắt đầu và mốc tính đi muộn theo giờ Việt Nam. Giờ kết thúc tự tính sau giờ bắt đầu 2 tiếng. Có thể nhập trận đã qua để bổ sung lịch sử.
 2. **Trận đấu & mùa giải → Quản lý mùa giải:** tạo khoảng ngày cho mùa giải. Có thể sửa tên/ngày hoặc lưu trữ; không xóa lịch sử mùa giải.
 3. Mở **Chi tiết & biên bản** của một trận. Bấm **Lập biên bản**, gắn mùa giải và chia cầu thủ thực tế vào đội A/B. Mỗi trận có đội hình riêng, không thay đổi đội hình các trận trước.
 4. Thêm bàn thắng, kiến tạo, phút ghi bàn, phản lưới (nếu có), MVP và ghi chú. Điền tỉ số theo các bàn đã ghi hoặc nhập tỉ số trực tiếp.
@@ -34,7 +34,7 @@
 - Bài cũ một ảnh được đọc như album một ảnh. Client cũ đổi ảnh bìa vẫn giữ những ảnh khác trong album.
 - Album có ảnh trước/sau, thumbnail, phím trái/phải, Escape, tải ảnh và giữ focus trong hộp xem ảnh. Tìm kiếm theo nội dung/tác giả và sắp xếp nhật ký theo thời gian.
 - Nút mặt trăng/mặt trời có cả ở trang đăng nhập và thanh điều hướng. Mặc định sáng; lựa chọn lưu trên trình duyệt, áp dụng trước khi render và đồng bộ giữa các tab. Không áp bộ lọc màu lên ảnh.
-- Tên sân, giờ bóng lăn (giờ Việt Nam) và ngày đá có khối thông tin riêng; mốc khóa điểm danh vẫn hiển thị riêng để tránh nhầm với giờ bắt đầu.
+- Tên sân, giờ bóng lăn và ngày đá hiển thị theo giờ Việt Nam. Trang chủ ghi giờ mở điểm danh sớm 30 phút và mốc tính đi muộn dưới nút điểm danh.
 
 ## Lịch sử và quyền truy cập
 

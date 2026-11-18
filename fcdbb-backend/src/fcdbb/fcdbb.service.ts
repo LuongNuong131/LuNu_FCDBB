@@ -250,7 +250,12 @@ export class FcdbbService implements OnModuleInit {
       order: { start_time: 'DESC' },
       take: 12,
     });
-    return { activeMatch, historyMatches };
+    return {
+      activeMatch: activeMatch
+        ? { ...activeMatch, checkin_open_time: this.checkinOpensAt(activeMatch) }
+        : null,
+      historyMatches,
+    };
   }
 
   async getMatches() {
@@ -270,10 +275,18 @@ export class FcdbbService implements OnModuleInit {
     return date;
   }
 
-  private normalizeMatchTimes(data: Partial<Match>) {
+  private normalizeMatchTimes(data: Partial<Match>, current?: Match) {
     const normalized = { ...data };
     for (const key of ['start_time', 'lock_time', 'end_time'] as const) {
       if (data[key]) normalized[key] = this.parseVietnamDate(data[key]);
+    }
+    const start = normalized.start_time;
+    if (
+      normalized.end_time === undefined &&
+      start &&
+      start.getTime() !== current?.start_time.getTime()
+    ) {
+      normalized.end_time = new Date(start.getTime() + 2 * 60 * 60 * 1000);
     }
     return normalized;
   }
@@ -284,7 +297,7 @@ export class FcdbbService implements OnModuleInit {
     const end = data.end_time ? new Date(data.end_time).getTime() : NaN;
     if ([start, lock, end].some(Number.isNaN))
       throw new BadRequestException(
-        'Vui lòng nhập đủ và đúng ba mốc thời gian.',
+        'Vui lòng kiểm tra các mốc thời gian của trận.',
       );
     if (!(start < lock && lock < end))
       throw new BadRequestException(
@@ -365,7 +378,10 @@ export class FcdbbService implements OnModuleInit {
     return this.matchRepo.manager.transaction(async (manager) => {
       const current = await manager.findOneBy(Match, { id });
       if (!current) throw new BadRequestException('Trận đấu không tồn tại.');
-      const normalized = this.normalizeMatchTimes(this.matchFields(data));
+      const normalized = this.normalizeMatchTimes(
+        this.matchFields(data),
+        current,
+      );
       const merged = { ...current, ...normalized };
       this.validateMatch(merged);
       const report = await manager.findOneBy(MatchReport, { match_id: id });
@@ -456,6 +472,10 @@ export class FcdbbService implements OnModuleInit {
     }).format(value);
   }
 
+  private checkinOpensAt(match: Match) {
+    return new Date(match.start_time.getTime() - 30 * 60 * 1000);
+  }
+
   async checkin(userId: number, matchId: number, lat: number, lng: number) {
     if (!Number.isInteger(matchId) || matchId < 1)
       throw new BadRequestException('Trận đấu không hợp lệ.');
@@ -481,7 +501,7 @@ export class FcdbbService implements OnModuleInit {
     const now = new Date();
     const lockTime = new Date(match.lock_time);
     const endTime = new Date(match.end_time);
-    const earliestCheckin = new Date(lockTime.getTime() - 15 * 60 * 1000);
+    const earliestCheckin = this.checkinOpensAt(match);
     if (now < earliestCheckin) {
       throw new BadRequestException(
         `Chưa đến giờ điểm danh. Bạn có thể điểm danh từ ${this.formatVietnamDateTime(earliestCheckin)}.`,

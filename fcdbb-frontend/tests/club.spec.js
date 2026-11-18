@@ -95,6 +95,7 @@ const signIn = async (page) => {
 
 test("login, 12 recent matches, pagination, search and accessible home", async ({
   page,
+  request,
 }) => {
   await page.goto("/login");
   await page.getByLabel("Tài khoản", { exact: true }).fill("admin");
@@ -108,7 +109,32 @@ test("login, 12 recent matches, pagination, search and accessible home", async (
   await expect(page.locator(".match-card")).toHaveCount(2);
   await page.getByLabel("Tìm trận hoặc sân").fill("Nội bộ buổi 14");
   await expect(page.locator(".match-card")).toHaveCount(1);
+
+  const kickoff = new Date();
+  kickoff.setUTCDate(kickoff.getUTCDate() + 1);
+  kickoff.setUTCHours(1, 0, 0, 0);
+  const response = await request.post(`${API}/matches`, {
+    headers: headers(),
+    data: {
+      ...past,
+      start_time: kickoff,
+      lock_time: new Date(kickoff.getTime() + 15 * 60_000),
+      end_time: undefined,
+    },
+  });
+  expect(response.ok()).toBe(true);
+  const upcoming = await response.json();
+  await page.reload();
+  await expect(page.locator(".kickoff .match-fact-value")).toHaveText("08:00");
+  await expect(page.getByText(/Có thể điểm danh từ 07:30/)).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(
+    (
+      await request.delete(`${API}/matches/${upcoming.id}`, {
+        headers: headers(),
+      })
+    ).ok(),
+  ).toBe(true);
 });
 
 test("admin records both teams, goal, result and audit; exports CSV and updates standings", async ({
@@ -762,9 +788,8 @@ test("mobile navigation, compact filters and record cards support complete daily
   await page.getByLabel("Vĩ độ", { exact: true }).fill("10.78");
   await page.getByLabel("Kinh độ", { exact: true }).fill("106.67");
   for (const [name, hour, minute] of [
-    ["Bắt đầu trận (giờ Việt Nam)", "18", "00"],
-    ["Mốc tính đi muộn (giờ Việt Nam)", "18", "15"],
-    ["Kết thúc buổi đá (giờ Việt Nam)", "20", "00"],
+    ["Bắt đầu trận (giờ Việt Nam)", "23", "30"],
+    ["Mốc tính đi muộn (giờ Việt Nam)", "23", "45"],
   ]) {
     await page.getByLabel(name, { exact: true }).fill("2026-02-02");
     await page.getByLabel(`${name} - giờ`, { exact: true }).selectOption(hour);
@@ -772,6 +797,7 @@ test("mobile navigation, compact filters and record cards support complete daily
       .getByLabel(`${name} - phút`, { exact: true })
       .selectOption(minute);
   }
+  await expect(page.locator("#match-end")).toContainText("01:30:00 03/02/2026");
   await page
     .getByRole("button", { name: "Tạo lịch trận", exact: true })
     .click();

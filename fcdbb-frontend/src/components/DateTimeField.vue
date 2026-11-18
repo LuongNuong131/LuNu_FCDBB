@@ -108,7 +108,7 @@ const toneClass = computed(
 );
 
 const emitValue = () => {
-  if (!dateDraft.value) return;
+  if (!dateDraft.value) return emit("update:modelValue", "");
   const iso = vietnamInputToIso(
     `${dateDraft.value}T${hourDraft.value}:${minuteDraft.value}:${secondDraft.value}`,
   );

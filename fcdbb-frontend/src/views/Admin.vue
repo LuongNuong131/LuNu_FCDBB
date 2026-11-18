@@ -129,12 +129,18 @@
               label="Mốc tính đi muộn (giờ Việt Nam)"
               tone="amber"
             />
-            <DateTimeField
-              v-model="match.end_time"
-              id="match-end"
-              label="Kết thúc buổi đá (giờ Việt Nam)"
-              tone="rose"
-            />
+            <div class="date-time-field">
+              <label class="field-label" for="match-end"
+                >Kết thúc buổi đá (giờ Việt Nam)</label
+              >
+              <output id="match-end" for="match-start-date" class="text-sm">
+                {{
+                  matchEndTime
+                    ? formatVietnamDateTime(matchEndTime)
+                    : "Tự tính sau khi chọn giờ bắt đầu."
+                }}
+              </output>
+            </div>
             <label
               ><span class="field-label">Bản đồ sân (tùy chọn)</span
               ><input
@@ -144,8 +150,7 @@
                 placeholder="https://maps.google.com/…"
             /></label>
             <p class="hint">
-              Có thể nhập trận đã qua để bổ sung lịch sử. Thứ tự: bắt đầu, mốc
-              tính muộn, kết thúc.
+              Mốc tính đi muộn nằm giữa giờ bắt đầu và giờ kết thúc.
             </p>
             <div class="flex gap-3">
               <button class="btn" :disabled="saving">
@@ -400,7 +405,7 @@ import api from "../api";
 import ClubIcon from "../components/ClubIcon.vue";
 import ClubAvatar from "../components/ClubAvatar.vue";
 import DateTimeField from "../components/DateTimeField.vue";
-import { formatVietnamDateTime, toVietnamInput } from "../utils/datetime";
+import { formatVietnamDateTime, parseVietnamDate } from "../utils/datetime";
 import { useToast } from "../composables/useToast";
 import { useDialog } from "../composables/useDialog";
 const { addToast } = useToast(),
@@ -424,10 +429,16 @@ const emptyMatch = () => ({
     map_link: "",
     start_time: "",
     lock_time: "",
-    end_time: "",
   }),
   match = ref(emptyMatch()),
   newUser = ref({ username: "", password: "", name: "", home_team: "" });
+const matchEndTime = computed(() => {
+  const start = parseVietnamDate(match.value.start_time);
+  if (!start) return "";
+  const saved = allMatches.value.find((m) => m.id === match.value.id);
+  if (saved && saved.start_time === match.value.start_time) return saved.end_time;
+  return new Date(start.getTime() + 2 * 60 * 60 * 1000).toISOString();
+});
 const load = async () => {
   try {
     const [m, u] = await Promise.all([api.get("/matches"), api.get("/users")]);
@@ -506,19 +517,14 @@ const resetMatch = () => {
 };
 const saveMatch = () =>
   run(async () => {
-    if (match.value.id)
-      await api.put(`/matches/${match.value.id}`, match.value);
-    else await api.post("/matches", match.value);
+    const data = { ...match.value, end_time: matchEndTime.value };
+    if (data.id) await api.put(`/matches/${data.id}`, data);
+    else await api.post("/matches", data);
     resetMatch();
   }, "Đã lưu lịch trận.");
 const editMatch = (m) => {
   matchFormOpen.value = true;
-  match.value = {
-    ...m,
-    start_time: toVietnamInput(m.start_time),
-    lock_time: toVietnamInput(m.lock_time),
-    end_time: toVietnamInput(m.end_time),
-  };
+  match.value = { ...m };
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 const closeMatch = async (m) => {

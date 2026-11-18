@@ -380,6 +380,55 @@ describe('Club management: real SQLite database and authenticated HTTP API', () 
         .historyMatches,
     ).toHaveLength(12);
   });
+  it('defaults the end time and opens check-in 30 minutes before kickoff', async () => {
+    const minute = 60_000;
+    const now = Date.now();
+    const start = now + 31 * minute;
+    const http = request(app.getHttpServer());
+    const { body: scheduled } = await http
+      .post('/api/matches')
+      .set(auth())
+      .send({
+        ...past,
+        start_time: new Date(start),
+        lock_time: new Date(start + 15 * minute),
+        end_time: undefined,
+      })
+      .expect(201);
+    expect(scheduled.end_time).toBe(
+      new Date(start + 120 * minute).toISOString(),
+    );
+
+    const checkin = () =>
+      http
+        .post('/api/attendance/checkin')
+        .set(memberAuth())
+        .send({ matchId: scheduled.id, lat: past.lat, lng: past.lng });
+    const { body: rejected } = await checkin().expect(400);
+    expect(rejected.message).toContain('Chưa đến giờ điểm danh');
+
+    const rescheduled = now + 29 * minute;
+    const { body: updated } = await http
+      .put(`/api/matches/${scheduled.id}`)
+      .set(auth())
+      .send({ start_time: new Date(rescheduled) })
+      .expect(200);
+    expect(updated.end_time).toBe(
+      new Date(rescheduled + 120 * minute).toISOString(),
+    );
+
+    const { body: home } = await http
+      .get('/api/home')
+      .set(memberAuth())
+      .expect(200);
+    expect(home.activeMatch).toMatchObject({
+      id: scheduled.id,
+      start_time: new Date(rescheduled).toISOString(),
+      checkin_open_time: new Date(rescheduled - 30 * minute).toISOString(),
+    });
+    const { body: attendance } = await checkin().expect(201);
+    expect(attendance).toMatchObject({ status: 'Đúng giờ', delay_seconds: 0 });
+  });
   it('uses authenticated identity for check-in, preserves GPS evidence and rejects duplicates', async () => {
     const now = Date.now();
     const active = (
