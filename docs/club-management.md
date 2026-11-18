@@ -2,7 +2,7 @@
 
 ## Quy trình sử dụng
 
-1. **Quản trị → Lịch trận:** chọn giờ bắt đầu và mốc tính đi muộn theo giờ Việt Nam. Giờ kết thúc tự tính sau giờ bắt đầu 2 tiếng. Có thể nhập trận đã qua để bổ sung lịch sử.
+1. **Quản trị → Lịch trận:** chọn giờ bắt đầu theo giờ Việt Nam. Hệ thống tự tính mốc đi muộn sau 15 phút và giờ kết thúc sau 2 tiếng. Có thể nhập trận đã qua để bổ sung lịch sử.
 2. **Trận đấu & mùa giải → Quản lý mùa giải:** tạo khoảng ngày cho mùa giải. Có thể sửa tên/ngày hoặc lưu trữ; không xóa lịch sử mùa giải.
 3. Mở **Chi tiết & biên bản** của một trận. Bấm **Lập biên bản**, gắn mùa giải và chia cầu thủ thực tế vào đội A/B. Mỗi trận có đội hình riêng, không thay đổi đội hình các trận trước.
 4. Thêm bàn thắng, kiến tạo, phút ghi bàn, phản lưới (nếu có), MVP và ghi chú. Điền tỉ số theo các bàn đã ghi hoặc nhập tỉ số trực tiếp.

@@ -787,26 +787,34 @@ test("mobile navigation, compact filters and record cards support complete daily
     .fill("Sân bóng Thống Nhất — Khu sân 2");
   await page.getByLabel("Vĩ độ", { exact: true }).fill("10.78");
   await page.getByLabel("Kinh độ", { exact: true }).fill("106.67");
-  for (const [name, hour, minute] of [
-    ["Bắt đầu trận (giờ Việt Nam)", "23", "30"],
-    ["Mốc tính đi muộn (giờ Việt Nam)", "23", "45"],
-  ]) {
-    await page.getByLabel(name, { exact: true }).fill("2026-02-02");
-    await page.getByLabel(`${name} - giờ`, { exact: true }).selectOption(hour);
-    await page
-      .getByLabel(`${name} - phút`, { exact: true })
-      .selectOption(minute);
-  }
-  await expect(page.locator("#match-end")).toContainText("01:30:00 03/02/2026");
+  const kickoffLabel = "Bắt đầu trận (giờ Việt Nam)";
+  const kickoffMinute = page.getByLabel(`${kickoffLabel} - phút`, { exact: true });
+  await page.getByLabel(kickoffLabel, { exact: true }).fill("2026-02-02");
+  await page
+    .getByLabel(`${kickoffLabel} - giờ`, { exact: true })
+    .selectOption("23");
+  await kickoffMinute.selectOption("50");
+  await expect(page.locator("#match-lock")).toHaveText("00:05:00 03/02/2026");
+  await expect(page.locator("#match-end")).toHaveText("01:50:00 03/02/2026");
   await page
     .getByRole("button", { name: "Tạo lịch trận", exact: true })
     .click();
-  await expect(
-    page.locator(".admin-fixtures").getByRole("heading", {
+  const createdMatch = page.locator(".admin-fixtures article").filter({
+    has: page.getByRole("heading", {
       name: "Buổi đá thêm từ điện thoại",
       exact: true,
     }),
-  ).toBeVisible();
+  });
+  await expect(createdMatch).toBeVisible();
+  await createdMatch
+    .getByRole("button", { name: "Sửa lịch", exact: true })
+    .click();
+  await expect(page.locator("#match-lock")).toHaveText("00:05:00 03/02/2026");
+  await kickoffMinute.selectOption("55");
+  await expect(page.locator("#match-lock")).toHaveText("00:10:00 03/02/2026");
+  await expect(page.locator("#match-end")).toHaveText("01:55:00 03/02/2026");
+  await page.getByRole("button", { name: "Lưu lịch trận", exact: true }).click();
+  await expect(createdMatch).toContainText("23:55:00 02/02/2026");
   await page.setViewportSize({ width: 390, height: 844 });
   await page
     .getByRole("button", { name: "Thêm lịch trận", exact: true })

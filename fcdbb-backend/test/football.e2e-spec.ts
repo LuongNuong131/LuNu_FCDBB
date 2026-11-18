@@ -380,7 +380,7 @@ describe('Club management: real SQLite database and authenticated HTTP API', () 
         .historyMatches,
     ).toHaveLength(12);
   });
-  it('defaults the end time and opens check-in 30 minutes before kickoff', async () => {
+  it('defaults the late and end times and opens check-in 30 minutes before kickoff', async () => {
     const minute = 60_000;
     const now = Date.now();
     const start = now + 31 * minute;
@@ -391,13 +391,14 @@ describe('Club management: real SQLite database and authenticated HTTP API', () 
       .send({
         ...past,
         start_time: new Date(start),
-        lock_time: new Date(start + 15 * minute),
+        lock_time: undefined,
         end_time: undefined,
       })
       .expect(201);
-    expect(scheduled.end_time).toBe(
-      new Date(start + 120 * minute).toISOString(),
-    );
+    expect(scheduled).toMatchObject({
+      lock_time: new Date(start + 15 * minute).toISOString(),
+      end_time: new Date(start + 120 * minute).toISOString(),
+    });
 
     const checkin = () =>
       http
@@ -413,9 +414,10 @@ describe('Club management: real SQLite database and authenticated HTTP API', () 
       .set(auth())
       .send({ start_time: new Date(rescheduled) })
       .expect(200);
-    expect(updated.end_time).toBe(
-      new Date(rescheduled + 120 * minute).toISOString(),
-    );
+    expect(updated).toMatchObject({
+      lock_time: new Date(rescheduled + 15 * minute).toISOString(),
+      end_time: new Date(rescheduled + 120 * minute).toISOString(),
+    });
 
     const { body: home } = await http
       .get('/api/home')
@@ -437,8 +439,8 @@ describe('Club management: real SQLite database and authenticated HTTP API', () 
         .set(auth())
         .send({
           ...past,
-          start_time: new Date(now - 1200000),
-          lock_time: new Date(now - 60000),
+          start_time: new Date(now - 16 * 60_000),
+          lock_time: undefined,
           end_time: new Date(now + 3600000),
         })
         .expect(201)
@@ -454,6 +456,7 @@ describe('Club management: real SQLite database and authenticated HTTP API', () 
         .set(auth())
     ).body;
     expect(detail.attendances[0].user.id).toBe(a);
+    expect(detail.attendances[0].status).toBe('Đi muộn');
     expect(detail.attendances[0].delay_seconds).toBeGreaterThan(0);
     expect(detail.attendances[0].user.password).toBeUndefined();
     expect(JSON.stringify(detail)).not.toContain('password');

@@ -123,23 +123,28 @@
               id="match-start"
               label="Bắt đầu trận (giờ Việt Nam)"
             />
-            <DateTimeField
-              v-model="match.lock_time"
-              id="match-lock"
-              label="Mốc tính đi muộn (giờ Việt Nam)"
-              tone="amber"
-            />
             <div class="date-time-field">
-              <label class="field-label" for="match-end"
-                >Kết thúc buổi đá (giờ Việt Nam)</label
-              >
-              <output id="match-end" for="match-start-date" class="text-sm">
-                {{
-                  matchEndTime
-                    ? formatVietnamDateTime(matchEndTime)
-                    : "Tự tính sau khi chọn giờ bắt đầu."
-                }}
-              </output>
+              <div class="form-row">
+                <div>
+                  <label class="field-label" for="match-lock"
+                    >Mốc tính đi muộn (giờ Việt Nam)</label
+                  >
+                  <output id="match-lock" for="match-start-date" class="text-sm">
+                    {{ formatVietnamDateTime(matchTimes?.lock_time) }}
+                  </output>
+                </div>
+                <div>
+                  <label class="field-label" for="match-end"
+                    >Kết thúc buổi đá (giờ Việt Nam)</label
+                  >
+                  <output id="match-end" for="match-start-date" class="text-sm">
+                    {{ formatVietnamDateTime(matchTimes?.end_time) }}
+                  </output>
+                </div>
+              </div>
+              <p v-if="!matchTimes" class="hint">
+                Tự tính sau khi chọn giờ bắt đầu.
+              </p>
             </div>
             <label
               ><span class="field-label">Bản đồ sân (tùy chọn)</span
@@ -149,9 +154,6 @@
                 type="url"
                 placeholder="https://maps.google.com/…"
             /></label>
-            <p class="hint">
-              Mốc tính đi muộn nằm giữa giờ bắt đầu và giờ kết thúc.
-            </p>
             <div class="flex gap-3">
               <button class="btn" :disabled="saving">
                 {{
@@ -428,16 +430,19 @@ const emptyMatch = () => ({
     lng: "",
     map_link: "",
     start_time: "",
-    lock_time: "",
   }),
   match = ref(emptyMatch()),
   newUser = ref({ username: "", password: "", name: "", home_team: "" });
-const matchEndTime = computed(() => {
-  const start = parseVietnamDate(match.value.start_time);
-  if (!start) return "";
+const matchTimes = computed(() => {
+  const start = parseVietnamDate(match.value.start_time)?.getTime();
+  if (start === undefined) return null;
   const saved = allMatches.value.find((m) => m.id === match.value.id);
-  if (saved && saved.start_time === match.value.start_time) return saved.end_time;
-  return new Date(start.getTime() + 2 * 60 * 60 * 1000).toISOString();
+  if (saved && saved.start_time === match.value.start_time)
+    return { lock_time: saved.lock_time, end_time: saved.end_time };
+  return {
+    lock_time: new Date(start + 15 * 60_000).toISOString(),
+    end_time: new Date(start + 120 * 60_000).toISOString(),
+  };
 });
 const load = async () => {
   try {
@@ -517,7 +522,7 @@ const resetMatch = () => {
 };
 const saveMatch = () =>
   run(async () => {
-    const data = { ...match.value, end_time: matchEndTime.value };
+    const data = { ...match.value, ...matchTimes.value };
     if (data.id) await api.put(`/matches/${data.id}`, data);
     else await api.post("/matches", data);
     resetMatch();

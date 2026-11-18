@@ -280,13 +280,14 @@ export class FcdbbService implements OnModuleInit {
     for (const key of ['start_time', 'lock_time', 'end_time'] as const) {
       if (data[key]) normalized[key] = this.parseVietnamDate(data[key]);
     }
-    const start = normalized.start_time;
-    if (
-      normalized.end_time === undefined &&
-      start &&
-      start.getTime() !== current?.start_time.getTime()
-    ) {
-      normalized.end_time = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    const start = normalized.start_time
+      ? normalized.start_time.getTime()
+      : undefined;
+    if (start !== undefined && start !== current?.start_time.getTime()) {
+      if (normalized.lock_time === undefined)
+        normalized.lock_time = new Date(start + 15 * 60_000);
+      if (normalized.end_time === undefined)
+        normalized.end_time = new Date(start + 120 * 60_000);
     }
     return normalized;
   }
@@ -301,7 +302,7 @@ export class FcdbbService implements OnModuleInit {
       );
     if (!(start < lock && lock < end))
       throw new BadRequestException(
-        'Thời gian phải theo thứ tự: Bắt đầu < Khóa điểm danh < Chốt sổ.',
+        'Mốc tính đi muộn phải nằm giữa giờ bắt đầu và giờ kết thúc trận.',
       );
   }
 
