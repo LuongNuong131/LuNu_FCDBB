@@ -718,13 +718,25 @@ table {
 .editor-player select {
   width: 100px;
 }
-.goal-row {
-  display: grid;
-  grid-template-columns: minmax(100px, 1fr) minmax(100px, 1fr) 90px 100px 44px;
-  align-items: end;
-  gap: 10px;
-  padding: 14px 0;
+.goal-editor {
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+.goal-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 4px;
   border-bottom: 1px solid var(--line);
+  text-align: start;
+}
+.goal-summary:hover {
+  background: var(--surface-soft);
 }
 .audit-entry {
   padding: 18px 0;
@@ -904,13 +916,6 @@ table {
   .roster-grid,
   .editor-players {
     grid-template-columns: 1fr;
-  }
-  .goal-row {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .goal-row .icon-btn {
-    justify-self: end;
   }
   .pagination {
     flex-wrap: wrap;

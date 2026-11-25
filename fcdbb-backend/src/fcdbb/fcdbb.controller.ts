@@ -57,6 +57,12 @@ export class FcdbbController {
   ) {
     return this.srv.setHomeTeam(id, body.home_team);
   }
+  @Put('users/:id/jersey-number') setJerseyNumber(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('jersey_number') number: unknown,
+  ) {
+    return this.srv.setJerseyNumber(id, number);
+  }
   @Delete('users/:id') deleteUser(@Param('id', ParseIntPipe) id: number) {
     return this.srv.deleteUser(id);
   }
@@ -111,8 +117,20 @@ export class FcdbbController {
   ) {
     return this.srv.getMatchDetails(id);
   }
-  @Post('attendance/checkin') checkin(@Body() body: any) {
-    return this.srv.checkin(body.userId, body.matchId, body.lat, body.lng);
+  @Post('attendance/checkin') checkin(@Body() body: any, @Req() req: any) {
+    return this.srv.checkin(body.matchId, body.lat, body.lng, req.actor);
+  }
+  @Post('matches/:id/attendance') addManualAttendance(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+    @Req() req: any,
+  ) {
+    return this.srv.addManualAttendance(
+      id,
+      body.userId,
+      body.checkedAt,
+      req.actor,
+    );
   }
 
   @Get('funds') getFunds() {

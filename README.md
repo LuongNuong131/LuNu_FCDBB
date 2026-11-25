@@ -37,10 +37,10 @@
 | Khu vực | Thành viên có thể làm gì |
 | --- | --- |
 | **Trang chủ và lịch đá** | Xem sân, mở bản đồ, xem giờ bóng lăn theo giờ Việt Nam. Tìm trận đã qua theo tên trận, tên sân, mùa giải hoặc trạng thái. |
-| **Điểm danh GPS** | Điểm danh tại sân trong bán kính 50 m. Hệ thống ghi thời gian, khoảng cách và trạng thái đúng giờ hoặc đi muộn. |
+| **Điểm danh** | Cầu thủ điểm danh GPS trong bán kính 50 m. Quản trị viên có thể điểm danh từ xa hoặc bổ sung giờ đến thực tế cho cầu thủ. |
 | **Đội hình và biên bản A/B** | Xem đội hình từng trận, tỉ số, bàn thắng, kiến tạo, phản lưới, MVP và ghi chú. Quản trị viên có thể xếp cầu thủ sang đội khác riêng cho trận đó. |
 | **Mùa giải và thống kê** | Xem bảng xếp hạng, phong độ và thống kê cầu thủ. Xuất biên bản hoặc thống kê mùa giải sang CSV. |
-| **Cầu thủ và quỹ đội** | Xem hồ sơ, vị trí, đội cố định và ảnh đại diện. Tra cứu thu chi và ảnh minh chứng. |
+| **Cầu thủ và quỹ đội** | Xem hồ sơ, số áo, vị trí, đội cố định và ảnh đại diện. Tra cứu thu chi và ảnh minh chứng. |
 | **Khoảnh khắc** | Đọc bài viết nội bộ và xem album toàn màn hình. Quản trị viên có thể đăng tối đa 12 ảnh mỗi bài, đổi thứ tự và chọn ảnh bìa. |
 
 Giao diện có nền sáng và tối, ghi nhớ lựa chọn trên trình duyệt và có thanh điều hướng riêng cho điện thoại.
@@ -56,7 +56,7 @@ Quản trị viên chọn giờ bắt đầu trong **Quản trị → Lịch tr�
 | **08:15** | Mốc tính đi muộn. Điểm danh sau giờ này được ghi nhận đi muộn. |
 | **10:00** | Kết thúc buổi đá, sau 2 tiếng. |
 
-Khi lập biên bản, danh sách đội hình lấy cầu thủ đã điểm danh của trận và những người đã có trong biên bản. Quản trị viên có thể bổ sung cầu thủ qua **Thêm cầu thủ**, điều chỉnh đội A/B và chốt kết quả. Kết quả đã chốt được tính vào bảng xếp hạng khi trận thuộc mùa giải. [Hướng dẫn quản lý trận đấu và mùa giải](docs/club-management.md)
+Khi lập biên bản, danh sách đội hình lấy cầu thủ đã điểm danh của trận và những người đã có trong biên bản. Quản trị viên có thể chốt tỉ số trước, kể cả 0–0, rồi bổ sung đội hình, bàn thắng và kiến tạo sau. Kết quả đã chốt được tính vào bảng xếp hạng khi trận thuộc mùa giải. [Hướng dẫn quản lý trận đấu và mùa giải](docs/club-management.md)
 
 ## Chạy local
 

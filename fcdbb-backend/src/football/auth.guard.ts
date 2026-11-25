@@ -36,10 +36,7 @@ export class ClubAuthGuard implements CanActivate {
     if (handler === 'audit' && user.role !== 'admin')
       throw new ForbiddenException('Chỉ quản trị viên được xem nhật ký.');
     if (['GET', 'HEAD'].includes(req.method)) return true;
-    if (handler === 'checkin') {
-      req.body.userId = user.id;
-      return true;
-    }
+    if (handler === 'checkin') return true;
     if (
       ['updateUser', 'changePassword', 'uploadAvatar'].includes(handler) &&
       Number(req.params.id) === user.id

@@ -455,7 +455,49 @@ html {
   min-width: 12px;
 }
 .player-identity {
+  position: relative;
   margin: 18px 0;
+}
+.player-identity.has-jersey {
+  padding-inline-end: 84px;
+}
+.jersey-number {
+  display: inline-grid;
+  place-content: center;
+  justify-items: center;
+  flex-shrink: 0;
+  min-width: 68px;
+  min-height: 72px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--accent-soft), var(--surface));
+  color: var(--pitch);
+  font-variant-numeric: tabular-nums;
+}
+.jersey-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.jersey-number strong {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+}
+.player-identity > .jersey-number {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+}
+.jersey-form {
+  display: grid;
+  grid-template-columns: minmax(54px, 74px) 44px;
+  gap: 4px;
+}
+.jersey-form .field {
+  padding-inline: 8px;
 }
 .player-identity h2 {
   overflow-wrap: anywhere;
@@ -1201,6 +1243,17 @@ html {
     gap: 0 16px;
     align-items: center;
     margin: 16px 0;
+  }
+  .player-identity.has-jersey {
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    padding-inline-end: 0;
+  }
+  .player-identity > .jersey-number {
+    position: static;
+    grid-column: 3;
+    grid-row: 1 / 3;
+    min-height: 62px;
+    min-width: 58px;
   }
   .player-identity .club-avatar {
     width: 64px;

@@ -79,6 +79,10 @@
               >
             </div>
           </div>
+          <span v-if="profile.jersey_number != null" class="jersey-number">
+            <span class="jersey-label">Số áo</span>
+            <strong>{{ profile.jersey_number }}</strong>
+          </span>
         </div>
       </div>
     </section>

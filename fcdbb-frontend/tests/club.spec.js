@@ -156,6 +156,10 @@ test("admin records both teams, goal, result and audit; exports CSV and updates 
     .getByLabel("Mùa giải", { exact: true })
     .selectOption(String(season.id));
   await page.getByRole("button", { name: "Thêm bàn", exact: true }).click();
+  await page
+    .getByLabel("Người ghi bàn", { exact: true })
+    .selectOption(String(players[0].id));
+  await page.getByText("Phút ghi bàn và phản lưới", { exact: true }).click();
   await page.getByLabel("Phút", { exact: true }).fill("25");
   await page
     .getByRole("button", { name: "Điền tỉ số theo bàn thắng đã ghi" })
@@ -1071,4 +1075,108 @@ test("actual lineup shows this match's attendees; extra players are added explic
   await expect(
     picker.getByRole("button", { name: "Thêm Võ Dũng vào đội B", exact: true }),
   ).toBeVisible();
+});
+
+test("admin saves score-only results and adds attendance and goals from mobile", async ({
+  page,
+  request,
+  context,
+}) => {
+  await signIn(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 11, longitude: 107 });
+
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "Thành viên", exact: true }).click();
+  await page.getByLabel("Số áo của Nguyễn An", { exact: true }).fill("42");
+  await page.getByRole("button", { name: "Lưu số áo của Nguyễn An" }).click();
+  await expect(page.getByText("Đã lưu số áo.")).toBeVisible();
+  await page.goto("/players");
+  await expect(
+    page
+      .locator(".player-card")
+      .filter({ hasText: "Nguyễn An" })
+      .locator(".jersey-number"),
+  ).toHaveText(/42/);
+
+  const result = await request.post(`${API}/matches`, {
+    headers: headers(),
+    data: { ...past, title: "Trận ghi bổ sung" },
+  });
+  expect(result.ok()).toBe(true);
+  const match = await result.json();
+  await page.goto(`/matches/${match.id}`);
+  await page.getByRole("button", { name: "Lập biên bản", exact: true }).click();
+  await page.getByLabel("Tỉ số đội A").fill("0");
+  await page.getByLabel("Tỉ số đội B").fill("0");
+  await page.getByRole("button", { name: "Lưu và chốt kết quả" }).click();
+  await expect(page.locator(".score-large")).toHaveText("0 : 0");
+  await expect(
+    page.getByText("Đã chốt kết quả", { exact: true }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Điểm danh GPS", exact: true })
+    .click();
+  await expect(
+    page.locator("#match-attendance").getByText(/Cách sân [0-9.]+ m/),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Bổ sung điểm danh", exact: true })
+    .click();
+  await page
+    .getByLabel("Cầu thủ cần điểm danh")
+    .selectOption(String(players[0].id));
+  await page.getByLabel("Giờ cầu thủ đến - phút").selectOption("05");
+  await page
+    .getByRole("button", { name: "Lưu điểm danh", exact: true })
+    .click();
+  const record = page
+    .locator("#match-attendance .person-row")
+    .filter({ hasText: "Nguyễn An" });
+  await expect(record).toContainText("18:05:00");
+  await expect(record).toContainText("Đúng giờ");
+  await expect(record).toContainText("Admin bổ sung");
+
+  await page
+    .getByRole("button", { name: "Chỉnh sửa biên bản", exact: true })
+    .click();
+  await page.getByLabel("Tỉ số đội A").fill("14");
+  await page.getByLabel("Tỉ số đội B").fill("22");
+  await page.getByRole("button", { name: "Thêm cầu thủ", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Thêm Trần Bình vào đội A", exact: true })
+    .click();
+  await page.getByLabel("Đội của Nguyễn An", { exact: true }).selectOption("A");
+  const addGoal = page.getByRole("button", { name: "Thêm bàn", exact: true });
+  await addGoal.click();
+  const scorer = page.getByLabel("Người ghi bàn", { exact: true });
+  await page.getByLabel("Tìm người ghi bàn theo số áo").fill("42");
+  await expect(scorer.locator("option")).toHaveCount(2);
+  await scorer.selectOption(String(players[0].id));
+  await page.getByLabel("Tìm kiến tạo theo tên").fill("tran binh");
+  await page
+    .getByLabel("Kiến tạo", { exact: true })
+    .selectOption(String(players[1].id));
+  await page
+    .getByRole("button", { name: "Thêm bàn tiếp", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: /Bàn 1 · Nguyễn An/ }),
+  ).toContainText("Trần Bình");
+  await expect(scorer).toHaveCount(1);
+  await page.getByLabel("Tìm người ghi bàn theo tên").fill("nguyen an");
+  await scorer.selectOption(String(players[0].id));
+  await page.getByLabel("Lý do chỉnh sửa (bắt buộc)").fill("Bổ sung diễn biến");
+  await page.getByRole("button", { name: "Lưu và chốt kết quả" }).click();
+  await expect(page.locator(".score-large")).toHaveText("14 : 22");
+  await page.reload();
+  await expect(page.locator(".score-large")).toHaveText("14 : 22");
+  await expect(
+    page.getByText("Kiến tạo: Trần Bình", { exact: false }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    375,
+  );
 });

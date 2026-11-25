@@ -30,3 +30,7 @@ export const downloadCsv = (filename, rows) => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
+
+const distanceFormat = new Intl.NumberFormat("vi-VN");
+export const formatFieldDistance = (meters) =>
+  `${distanceFormat.format(meters)} m`;
