@@ -652,46 +652,20 @@
                 v-if="manualCandidates.length"
                 type="button"
                 class="btn secondary"
-                :aria-expanded="manualOpen"
-                @click="toggleManualAttendance"
+                aria-haspopup="dialog"
+                :disabled="refreshingManualAttendance"
+                @click="attendanceDialog?.open()"
               >
                 <ClubIcon name="plus" />Bổ sung điểm danh
               </button>
             </div>
-            <form
-              v-if="manualOpen"
-              class="form-pill mb-3 space-y-3"
-              @submit.prevent="saveManualAttendance"
-            >
-              <label>
-                <span class="field-label">Cầu thủ cần điểm danh</span>
-                <select v-model="manualUserId" class="field" required>
-                  <option :value="null" disabled>Chọn cầu thủ</option>
-                  <option
-                    v-for="p in manualCandidates"
-                    :key="p.id"
-                    :value="p.id"
-                  >
-                    {{ p.jersey_number == null ? "" : `#${p.jersey_number} · `
-                    }}{{ p.name }}
-                  </option>
-                </select>
-              </label>
-              <DateTimeField
-                id="attendance-checked-at"
-                v-model="manualTime"
-                label="Giờ cầu thủ đến"
-              />
-              <p v-if="manualError" class="error-state" role="alert">
-                {{ manualError }}
-              </p>
-              <button
-                class="btn"
-                :disabled="savingAttendance || !manualUserId || !manualTime"
-              >
-                {{ savingAttendance ? "Đang lưu…" : "Lưu điểm danh" }}
-              </button>
-            </form>
+            <ManualAttendanceDialog
+              v-if="isAdmin && report.status !== 'cancelled'"
+              ref="attendanceDialog"
+              :match="match"
+              :players="manualCandidates"
+              @saved="manualAttendanceSaved"
+            />
             <div
               v-for="a in details.attendances"
               :key="a.id"
@@ -820,7 +794,7 @@ import api from "../api";
 import MatchFacts from "../components/football/MatchFacts.vue";
 import GoalPlayerField from "../components/football/GoalPlayerField.vue";
 import ClubIcon from "../components/ClubIcon.vue";
-import DateTimeField from "../components/DateTimeField.vue";
+import ManualAttendanceDialog from "../components/football/ManualAttendanceDialog.vue";
 import { useToast } from "../composables/useToast";
 import { useCheckin } from "../composables/useCheckin";
 import { useDialog } from "../composables/useDialog";
@@ -860,11 +834,8 @@ const match = ref(null),
   goalEditor = ref(null),
   goalScorerField = ref(null),
   addGoalButton = ref(null),
-  manualOpen = ref(false),
-  manualUserId = ref(null),
-  manualTime = ref(""),
-  manualError = ref(""),
-  savingAttendance = ref(false);
+  attendanceDialog = ref(null),
+  refreshingManualAttendance = ref(false);
 const load = async () => {
   loading.value = true;
   loadError.value = "";
@@ -891,14 +862,7 @@ const load = async () => {
     loading.value = false;
   }
 };
-watch(
-  () => route.params.id,
-  () => {
-    manualOpen.value = false;
-    load();
-  },
-  { immediate: true },
-);
+watch(() => route.params.id, load, { immediate: true });
 const attendeeIds = computed(
   () => new Set((details.value.attendances || []).map((a) => a.user.id)),
 );
@@ -907,14 +871,6 @@ const manualCandidates = computed(() =>
     (p) => p.id !== currentUser.id && !attendeeIds.value.has(p.id),
   ),
 );
-const toggleManualAttendance = () => {
-  if (!manualOpen.value) {
-    manualUserId.value = null;
-    manualTime.value = match.value.start_time;
-    manualError.value = "";
-  }
-  manualOpen.value = !manualOpen.value;
-};
 const refreshAttendance = async () => {
   const id = match.value.id;
   const [d, a] = await Promise.all([
@@ -925,24 +881,19 @@ const refreshAttendance = async () => {
   details.value = d.data;
   audit.value = a.data;
 };
-const saveManualAttendance = async () => {
-  savingAttendance.value = true;
-  manualError.value = "";
+const manualAttendanceSaved = async (matchId) => {
+  if (Number(route.params.id) !== matchId) return;
+  refreshingManualAttendance.value = true;
+  addToast("Đã bổ sung điểm danh.", "success");
   try {
-    await api.post(`/matches/${match.value.id}/attendance`, {
-      userId: manualUserId.value,
-      checkedAt: manualTime.value,
-    });
-    manualOpen.value = false;
-    addToast("Đã bổ sung điểm danh.", "success");
     await refreshAttendance();
   } catch (e) {
-    const message =
-      e.response?.data?.message || "Không cập nhật được điểm danh.";
-    if (manualOpen.value) manualError.value = message;
-    else addToast(message, "error");
+    addToast(
+      e.response?.data?.message || "Không tải lại được danh sách điểm danh.",
+      "error",
+    );
   } finally {
-    savingAttendance.value = false;
+    refreshingManualAttendance.value = false;
   }
 };
 

@@ -1122,16 +1122,55 @@ test("admin saves score-only results and adds attendance and goals from mobile",
   await expect(
     page.locator("#match-attendance").getByText(/Cách sân [0-9.]+ m/),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Bổ sung điểm danh", exact: true })
-    .click();
-  await page
-    .getByLabel("Cầu thủ cần điểm danh")
-    .selectOption(String(players[0].id));
-  await page.getByLabel("Giờ cầu thủ đến - phút").selectOption("05");
-  await page
-    .getByRole("button", { name: "Lưu điểm danh", exact: true })
-    .click();
+  const openAttendance = page.getByRole("button", {
+    name: "Bổ sung điểm danh",
+    exact: true,
+  });
+  const attendance = page.getByRole("dialog", { name: "Bổ sung điểm danh" });
+  const player = attendance.getByLabel("Cầu thủ cần điểm danh");
+  const saveAttendance = attendance.getByRole("button", {
+    name: "Lưu điểm danh",
+    exact: true,
+  });
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openAttendance.click();
+  await expect(attendance).toBeInViewport({ ratio: 1 });
+  await expect(player).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(attendance).toBeHidden();
+  await expect(openAttendance).toBeFocused();
+
+  await page.setViewportSize({ width: 568, height: 320 });
+  await openAttendance.click();
+  const minutes = attendance.getByLabel("Giờ cầu thủ đến - phút");
+  await expect(saveAttendance).toBeInViewport({ ratio: 1 });
+  await minutes.scrollIntoViewIfNeeded();
+  await expect(minutes).toBeInViewport({ ratio: 1 });
+  await expect(saveAttendance).toBeInViewport({ ratio: 1 });
+  await attendance.getByRole("button", { name: "Hủy", exact: true }).click();
+  await expect(attendance).toBeHidden();
+
+  await page.setViewportSize({ width: 320, height: 568 });
+  await openAttendance.click();
+  await expect(attendance).toBeInViewport({ ratio: 1 });
+  for (const control of [
+    player,
+    attendance.getByLabel("Giờ cầu thủ đến", { exact: true }),
+    attendance.getByLabel("Giờ cầu thủ đến - giờ"),
+    minutes,
+    attendance.getByLabel("Giờ cầu thủ đến - giây"),
+    saveAttendance,
+  ]) {
+    await expect(control).toBeInViewport({ ratio: 1 });
+  }
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expect(saveAttendance).toBeDisabled();
+  await player.selectOption(String(players[0].id));
+  await minutes.selectOption("05");
+  await saveAttendance.click();
+  await expect(attendance).toBeHidden();
+  await page.setViewportSize({ width: 375, height: 812 });
   const record = page
     .locator("#match-attendance .person-row")
     .filter({ hasText: "Nguyễn An" });
