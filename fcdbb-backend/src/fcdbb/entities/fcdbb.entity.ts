@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('users')
@@ -26,6 +27,9 @@ export class User {
   @Column({ default: 'Chưa rõ' }) position: string;
   @Column({ default: '/images/players/default.jpg' }) avatar: string;
   @Column({ default: 'user' }) role: string;
+  @Index('IDX_users_jersey_number', { unique: true })
+  @Column({ type: 'int', nullable: true })
+  jersey_number: number | null;
   @Column({ type: 'varchar', length: 1, nullable: true }) home_team:
     'A' | 'B' | null;
 }
@@ -44,11 +48,18 @@ export class Match {
 }
 
 @Entity('attendance')
+// Existing records have no source and are kept intact, including any historical duplicates.
+@Index('IDX_attendance_match_user_recorded', ['match', 'user'], {
+  unique: true,
+  where: '"source" IS NOT NULL',
+})
 export class Attendance {
   @PrimaryGeneratedColumn() id: number;
   @ManyToOne(() => User) @JoinColumn({ name: 'user_id' }) user: User;
   @ManyToOne(() => Match) @JoinColumn({ name: 'match_id' }) match: Match;
-  @Column() distance: number;
+  @Column({ type: 'int', nullable: true }) distance: number | null;
+  @Column({ type: 'varchar', length: 6, nullable: true })
+  source: 'gps' | 'manual' | null;
   @Column() status: string;
   @Column({ default: 0 }) delay_seconds: number;
   @CreateDateColumn() created_at: Date;

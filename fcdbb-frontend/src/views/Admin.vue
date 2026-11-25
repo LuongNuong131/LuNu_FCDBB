@@ -323,6 +323,7 @@
             <tr>
               <th>Tài khoản</th>
               <th>Thành viên</th>
+              <th>Số áo</th>
               <th>Đội cố định</th>
               <th>Quyền truy cập</th>
               <th>Thao tác</th>
@@ -341,6 +342,31 @@
                   />
                   <span class="font-semibold">{{ u.name }}</span>
                 </div>
+              </td>
+              <td data-label="Số áo">
+                <form
+                  class="jersey-form"
+                  @submit.prevent="saveJerseyNumber(u, $event)"
+                >
+                  <input
+                    :value="u.jersey_number ?? ''"
+                    type="number"
+                    name="jersey_number"
+                    min="1"
+                    max="99"
+                    placeholder="—"
+                    class="field"
+                    :aria-label="`Số áo của ${u.name}`"
+                    :disabled="saving"
+                  />
+                  <button
+                    class="icon-btn"
+                    :aria-label="`Lưu số áo của ${u.name}`"
+                    :disabled="saving"
+                  >
+                    <ClubIcon name="check" />
+                  </button>
+                </form>
               </td>
               <td data-label="Đội cố định">
                 <select
@@ -391,7 +417,7 @@
               </td>
             </tr>
             <tr v-if="!filteredUsers.length">
-              <td colspan="5" class="muted record-empty">
+              <td colspan="6" class="muted record-empty">
                 Không có thành viên phù hợp.
               </td>
             </tr>
@@ -562,6 +588,23 @@ const createUser = () =>
     await api.post("/users", newUser.value);
     newUser.value = { username: "", password: "", name: "", home_team: "" };
   }, "Đã tạo thành viên.");
+const saveJerseyNumber = async (user, event) => {
+  const raw = new FormData(event.currentTarget).get("jersey_number");
+  saving.value = true;
+  error.value = "";
+  try {
+    const { data } = await api.put(`/users/${user.id}/jersey-number`, {
+      jersey_number: raw === "" ? null : Number(raw),
+    });
+    user.jersey_number = data.jersey_number;
+    addToast("Đã lưu số áo.", "success");
+  } catch (e) {
+    error.value = e.response?.data?.message || "Không lưu được số áo.";
+    addToast(error.value, "error");
+  } finally {
+    saving.value = false;
+  }
+};
 const saveHomeTeam = async (u, event) => {
   const select = event.target;
   saving.value = true;

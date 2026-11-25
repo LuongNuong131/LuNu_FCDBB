@@ -58,7 +58,7 @@
             <div v-if="activeMatch" class="fixture-actions">
               <button
                 class="btn"
-                @click="checkin"
+                @click="checkin(activeMatch.id, load)"
                 :disabled="checking || hasCheckedIn"
               >
                 <ClubIcon :name="hasCheckedIn ? 'check' : 'pin'" />{{
@@ -66,7 +66,9 @@
                     ? "Đang lấy vị trí…"
                     : hasCheckedIn
                       ? "Đã điểm danh"
-                      : "Điểm danh tại sân"
+                      : user.role === "admin"
+                        ? "Điểm danh GPS"
+                        : "Điểm danh tại sân"
                 }}</button
               ><router-link
                 :to="`/matches/${activeMatch.id}`"
@@ -89,11 +91,20 @@
                 formatVietnamDateTime(activeMatch.checkin_open_time, {
                   second: undefined,
                 })
-              }}.
+              }}{{ user.role === "admin" ? " (cầu thủ)." : "." }}
             </p>
             <p v-if="activeMatch" class="hint">
-              Điểm danh trong bán kính 50m. Mốc tính đi muộn:
+              {{
+                user.role === "admin"
+                  ? "Admin có thể điểm danh GPS bất cứ lúc nào."
+                  : "Điểm danh trong bán kính 50 m."
+              }}
+              Mốc tính đi muộn
               {{ formatVietnamDateTime(activeMatch.lock_time) }}.
+            </p>
+            <p v-if="ownAttendance?.distance != null" class="hint">
+              Cách sân {{ formatFieldDistance(ownAttendance.distance) }} khi
+              điểm danh.
             </p>
           </div>
         </section>
@@ -185,18 +196,19 @@ import ClubIcon from "../components/ClubIcon.vue";
 import MatchFacts from "../components/football/MatchFacts.vue";
 import MatchList from "../components/football/MatchList.vue";
 import { formatVietnamDateTime } from "../utils/datetime";
-import { useToast } from "../composables/useToast";
-const user = JSON.parse(localStorage.getItem("fcdbb_user") || "{}"),
-  { addToast } = useToast();
+import { formatFieldDistance } from "../utils/football";
+import { useCheckin } from "../composables/useCheckin";
+const user = JSON.parse(localStorage.getItem("fcdbb_user") || "{}");
+const { checking, checkin } = useCheckin();
 const activeMatch = ref(null),
   activeDetails = ref({}),
   summary = ref({ completed: 0, totalGoals: 0, players: 0, standings: [] }),
   error = ref(""),
-  loading = ref(true),
-  checking = ref(false);
-const hasCheckedIn = computed(() =>
-  activeDetails.value.attendances?.some((a) => a.user.id === user.id),
+  loading = ref(true);
+const ownAttendance = computed(() =>
+  activeDetails.value.attendances?.find((a) => a.user.id === user.id),
 );
+const hasCheckedIn = computed(() => Boolean(ownAttendance.value));
 const load = async () => {
   error.value = "";
   loading.value = true;
@@ -217,41 +229,6 @@ const load = async () => {
   } finally {
     loading.value = false;
   }
-};
-const checkin = () => {
-  if (!navigator.geolocation)
-    return addToast("Trình duyệt không hỗ trợ định vị.", "warning");
-  checking.value = true;
-  navigator.geolocation.getCurrentPosition(
-    async (pos) => {
-      try {
-        await api.post("/attendance/checkin", {
-          matchId: activeMatch.value.id,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        });
-        addToast("Điểm danh thành công.", "success");
-        await load();
-      } catch (e) {
-        addToast(
-          e.response?.data?.message || "Không thể điểm danh. Thử lại.",
-          "error",
-        );
-      } finally {
-        checking.value = false;
-      }
-    },
-    (e) => {
-      checking.value = false;
-      addToast(
-        e.code === 1
-          ? "Cho phép truy cập vị trí để điểm danh tại sân."
-          : "Chưa lấy được vị trí. Bật GPS và thử lại.",
-        "error",
-      );
-    },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
-  );
 };
 onMounted(load);
 </script>

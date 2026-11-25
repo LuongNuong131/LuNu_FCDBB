@@ -39,6 +39,9 @@
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
+          <a v-if="isAdmin" href="#match-attendance" class="btn secondary">
+            <ClubIcon name="pin" />Điểm danh
+          </a>
           <button class="btn secondary" @click="exportReport">
             <ClubIcon name="download" />Xuất biên bản</button
           ><button v-if="isAdmin && !editing" class="btn" @click="beginEdit">
@@ -62,13 +65,17 @@
             <div class="text-center">
               <div class="score-large">
                 {{
-                  report.status === "completed"
-                    ? `${report.score_a} : ${report.score_b}`
+                  displayedScore
+                    ? `${displayedScore.score_a} : ${displayedScore.score_b}`
                     : "— : —"
                 }}
               </div>
               <p class="text-xs mt-3 mb-0 font-semibold">
-                {{ resultLabel(report) }}
+                {{
+                  editing && displayedScore === draft
+                    ? "Tỉ số đang nhập"
+                    : resultLabel(report)
+                }}
               </p>
             </div>
             <div class="scoreboard-team">
@@ -89,7 +96,8 @@
           <div>
             <h2>Biên bản trận đấu</h2>
             <p class="hint">
-              Chọn đội hình thực tế, ghi nhận bàn thắng rồi chốt kết quả.
+              Có thể chốt tỉ số trước rồi bổ sung đội hình, bàn thắng và kiến
+              tạo sau.
             </p>
           </div>
           <button
@@ -130,7 +138,11 @@
             </select></label
           ><label
             ><span class="field-label">Trạng thái biên bản</span
-            ><select v-model="draft.status" class="field">
+            ><select
+              v-model="draft.status"
+              class="field"
+              @change="statusChosen = true"
+            >
               <option value="draft">Bản nháp / đang mở</option>
               <option value="completed">Chốt kết quả</option>
               <option value="cancelled">Hủy trận</option>
@@ -316,78 +328,131 @@
           <div>
             <h2>Bàn thắng & kiến tạo</h2>
             <p class="hint">
-              Tổng bàn: A {{ goalCounts.A }} – {{ goalCounts.B }} B. Phản lưới
-              được tính cho đội đối phương.
+              Đã ghi chi tiết {{ goalCounts.A }} bàn đội A và
+              {{ goalCounts.B }} bàn đội B.
             </p>
           </div>
           <button
             type="button"
+            ref="addGoalButton"
             class="btn secondary"
             @click="addGoal"
-            :disabled="!draft.roster.length"
+            :disabled="!draft.roster.length || draft.goals.length >= 200"
           >
             <ClubIcon name="plus" />Thêm bàn
           </button>
         </div>
-        <div v-for="(g, i) in draft.goals" :key="i" class="goal-row">
-          <label
-            ><span class="field-label">Người ghi bàn</span
-            ><select
-              v-model="g.userId"
-              class="field"
-              @change="g.assistUserId = null"
+        <div
+          v-if="activeGoal"
+          ref="goalEditor"
+          :key="activeGoalIndex"
+          class="goal-editor"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h3 class="text-sm font-bold">Bàn {{ activeGoalIndex + 1 }}</h3>
+            <button
+              class="icon-btn"
+              type="button"
+              @click="removeGoal(activeGoalIndex)"
+              :aria-label="`Xóa bàn thắng ${activeGoalIndex + 1}`"
             >
-              <option :value="null" disabled>Chọn cầu thủ</option>
-              <option
-                v-for="p in draft.roster"
-                :key="p.userId"
-                :value="p.userId"
+              <ClubIcon name="close" />
+            </button>
+          </div>
+          <div class="form-row">
+            <GoalPlayerField
+              ref="goalScorerField"
+              :model-value="activeGoal.userId"
+              label="Người ghi bàn"
+              placeholder="Chọn cầu thủ"
+              :players="goalPlayers"
+              @update:model-value="setGoalScorer"
+            />
+            <GoalPlayerField
+              v-model="activeGoal.assistUserId"
+              label="Kiến tạo"
+              placeholder="Không ghi nhận"
+              :players="assistsFor(activeGoal)"
+              :disabled="!activeGoal.userId || activeGoal.ownGoal"
+            />
+          </div>
+          <details class="mt-3">
+            <summary class="text-sm cursor-pointer">
+              Phút ghi bàn và phản lưới
+            </summary>
+            <div class="form-row mt-3">
+              <label
+                ><span class="field-label">Phút</span
+                ><input
+                  v-model.number="activeGoal.minute"
+                  type="number"
+                  min="0"
+                  max="180"
+                  class="field"
+                  placeholder="—" /></label
+              ><label class="flex items-center gap-2 text-xs"
+                ><input
+                  v-model="activeGoal.ownGoal"
+                  type="checkbox"
+                  @change="activeGoal.assistUserId = null"
+                />Phản lưới</label
               >
-                {{ p.name }} ({{ p.team }})
-              </option>
-            </select></label
-          ><label
-            ><span class="field-label">Kiến tạo</span
-            ><select
-              v-model="g.assistUserId"
-              class="field"
-              :disabled="g.ownGoal"
+            </div>
+          </details>
+          <p v-if="goalError" class="error-state mt-3" role="alert">
+            {{ goalError }}
+          </p>
+          <div class="flex flex-wrap gap-2 mt-3">
+            <button
+              type="button"
+              class="btn"
+              :disabled="draft.goals.length >= 200"
+              @click="addGoal"
             >
-              <option :value="null">Không ghi nhận</option>
-              <option
-                v-for="p in assistsFor(g)"
-                :key="p.userId"
-                :value="p.userId"
-              >
-                {{ p.name }}
-              </option>
-            </select></label
-          ><label
-            ><span class="field-label">Phút</span
-            ><input
-              v-model.number="g.minute"
-              type="number"
-              min="0"
-              max="180"
-              class="field"
-              placeholder="—" /></label
-          ><label class="flex items-center gap-2 text-xs pb-2"
-            ><input
-              v-model="g.ownGoal"
-              type="checkbox"
-              @change="g.assistUserId = null"
-            />Phản lưới</label
-          ><button
-            class="icon-btn"
+              <ClubIcon name="plus" />Thêm bàn tiếp
+            </button>
+            <button type="button" class="btn secondary" @click="finishGoal">
+              Thu gọn bàn
+            </button>
+          </div>
+        </div>
+        <div v-for="(g, i) in draft.goals" :key="i">
+          <button
+            v-if="i !== activeGoalIndex"
             type="button"
-            @click="draft.goals.splice(i, 1)"
-            :aria-label="`Xóa bàn thắng ${i + 1}`"
+            class="goal-summary"
+            @click="completeActiveGoal() && openGoal(i)"
           >
-            <ClubIcon name="close" />
+            <span>
+              <strong>Bàn {{ i + 1 }} · {{ goalPlayerName(g.userId) }}</strong>
+              <span
+                v-if="
+                  g.ownGoal ||
+                  g.assistUserId ||
+                  (g.minute != null && g.minute !== '')
+                "
+                class="block muted text-xs"
+              >
+                {{
+                  [
+                    g.ownGoal ? "Phản lưới" : "",
+                    g.assistUserId
+                      ? `Kiến tạo · ${goalPlayerName(g.assistUserId)}`
+                      : "",
+                    g.minute != null && g.minute !== ""
+                      ? `Phút ${g.minute}`
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                }}
+              </span>
+            </span>
+            <span class="sr-only">Chỉnh sửa</span><ClubIcon name="edit" />
           </button>
         </div>
-        <p v-if="!draft.goals.length" class="hint py-4">
-          Chưa có bàn thắng. Trận hòa 0–0 có thể chốt mà không cần thêm bàn.
+        <p v-if="!draft.roster.length" class="hint py-4">
+          Thêm cầu thủ vào đội hình để ghi chi tiết bàn thắng.
         </p>
         <div id="report-result" class="form-row score-inputs mt-6">
           <label
@@ -454,8 +519,8 @@
           ></textarea>
         </label>
         <p class="hint mb-4">
-          Khi chốt, tỉ số phải khớp tổng bàn thắng và mỗi đội phải có ít nhất
-          một cầu thủ. Mọi thay đổi được lưu vào nhật ký.
+          Nhập tỉ số cả hai đội để chốt kết quả, kể cả 0–0. Số bàn đã ghi chi
+          tiết của mỗi đội tối đa bằng tỉ số đã nhập.
         </p>
         <div class="report-save-bar">
           <button class="btn" :disabled="saving">
@@ -562,13 +627,71 @@
           </section>
         </div>
         <aside class="stack">
-          <section class="panel">
+          <section id="match-attendance" class="panel">
             <div class="section-head">
-              <h2>Điểm danh tại sân</h2>
+              <h2>Điểm danh</h2>
               <span class="badge green"
                 >{{ details.attendances?.length || 0 }} người</span
               >
             </div>
+            <div
+              v-if="isAdmin && report.status !== 'cancelled'"
+              class="flex flex-wrap gap-2 mb-3"
+            >
+              <button
+                v-if="!attendeeIds.has(currentUser.id)"
+                class="btn secondary"
+                :disabled="checking"
+                @click="checkin(match.id, refreshAttendance)"
+              >
+                <ClubIcon name="pin" />{{
+                  checking ? "Đang lấy vị trí…" : "Điểm danh GPS"
+                }}
+              </button>
+              <button
+                v-if="manualCandidates.length"
+                type="button"
+                class="btn secondary"
+                :aria-expanded="manualOpen"
+                @click="toggleManualAttendance"
+              >
+                <ClubIcon name="plus" />Bổ sung điểm danh
+              </button>
+            </div>
+            <form
+              v-if="manualOpen"
+              class="form-pill mb-3 space-y-3"
+              @submit.prevent="saveManualAttendance"
+            >
+              <label>
+                <span class="field-label">Cầu thủ cần điểm danh</span>
+                <select v-model="manualUserId" class="field" required>
+                  <option :value="null" disabled>Chọn cầu thủ</option>
+                  <option
+                    v-for="p in manualCandidates"
+                    :key="p.id"
+                    :value="p.id"
+                  >
+                    {{ p.jersey_number == null ? "" : `#${p.jersey_number} · `
+                    }}{{ p.name }}
+                  </option>
+                </select>
+              </label>
+              <DateTimeField
+                id="attendance-checked-at"
+                v-model="manualTime"
+                label="Giờ cầu thủ đến"
+              />
+              <p v-if="manualError" class="error-state" role="alert">
+                {{ manualError }}
+              </p>
+              <button
+                class="btn"
+                :disabled="savingAttendance || !manualUserId || !manualTime"
+              >
+                {{ savingAttendance ? "Đang lưu…" : "Lưu điểm danh" }}
+              </button>
+            </form>
             <div
               v-for="a in details.attendances"
               :key="a.id"
@@ -580,7 +703,11 @@
                   formatVietnamDateTime(a.created_at)
                 }}</span
                 ><span class="block text-xs muted"
-                  >{{ a.distance }}m từ sân{{
+                  >{{
+                    a.source === "manual"
+                      ? "Admin bổ sung"
+                      : `Cách sân ${formatFieldDistance(a.distance)}`
+                  }}{{
                     a.delay_seconds > 0
                       ? ` · Muộn ${Math.floor(a.delay_seconds / 60)} phút ${a.delay_seconds % 60} giây`
                       : ""
@@ -593,7 +720,7 @@
               >
             </div>
             <p v-if="!details.attendances?.length" class="muted text-sm">
-              Chưa có lượt điểm danh GPS.
+              Chưa có lượt điểm danh.
             </p>
             <details class="mt-5">
               <summary class="text-sm cursor-pointer font-semibold">
@@ -650,7 +777,7 @@
             <h2>Nhật ký thay đổi</h2>
             <p class="hint">
               Người thực hiện, thời gian, lý do và dữ liệu trước/sau của lịch
-              trận và biên bản.
+              trận, điểm danh và biên bản.
             </p>
           </div>
           <span class="badge">{{ audit.length }} lần ghi nhận</span>
@@ -691,16 +818,25 @@ import { ref, computed, watch, nextTick } from "vue";
 import { useRoute, onBeforeRouteLeave } from "vue-router";
 import api from "../api";
 import MatchFacts from "../components/football/MatchFacts.vue";
+import GoalPlayerField from "../components/football/GoalPlayerField.vue";
 import ClubIcon from "../components/ClubIcon.vue";
+import DateTimeField from "../components/DateTimeField.vue";
 import { useToast } from "../composables/useToast";
+import { useCheckin } from "../composables/useCheckin";
 import { useDialog } from "../composables/useDialog";
 import { formatVietnamDateTime } from "../utils/datetime";
-import { matchStatus, resultLabel, downloadCsv } from "../utils/football";
+import {
+  matchStatus,
+  resultLabel,
+  downloadCsv,
+  formatFieldDistance,
+} from "../utils/football";
 const route = useRoute(),
   { addToast } = useToast(),
   { openConfirm } = useDialog(),
-  isAdmin =
-    JSON.parse(localStorage.getItem("fcdbb_user") || "{}").role === "admin";
+  currentUser = JSON.parse(localStorage.getItem("fcdbb_user") || "{}"),
+  isAdmin = currentUser.role === "admin";
+const { checking, checkin } = useCheckin();
 const match = ref(null),
   report = ref({ roster: [], goals: [] }),
   details = ref({}),
@@ -717,7 +853,18 @@ const match = ref(null),
   addPlayerButton = ref(null),
   playerPicker = ref(null),
   saving = ref(false),
-  saveError = ref("");
+  saveError = ref(""),
+  statusChosen = ref(false),
+  activeGoalIndex = ref(null),
+  goalError = ref(""),
+  goalEditor = ref(null),
+  goalScorerField = ref(null),
+  addGoalButton = ref(null),
+  manualOpen = ref(false),
+  manualUserId = ref(null),
+  manualTime = ref(""),
+  manualError = ref(""),
+  savingAttendance = ref(false);
 const load = async () => {
   loading.value = true;
   loadError.value = "";
@@ -744,10 +891,61 @@ const load = async () => {
     loading.value = false;
   }
 };
-watch(() => route.params.id, load, { immediate: true });
+watch(
+  () => route.params.id,
+  () => {
+    manualOpen.value = false;
+    load();
+  },
+  { immediate: true },
+);
 const attendeeIds = computed(
   () => new Set((details.value.attendances || []).map((a) => a.user.id)),
 );
+const manualCandidates = computed(() =>
+  users.value.filter(
+    (p) => p.id !== currentUser.id && !attendeeIds.value.has(p.id),
+  ),
+);
+const toggleManualAttendance = () => {
+  if (!manualOpen.value) {
+    manualUserId.value = null;
+    manualTime.value = match.value.start_time;
+    manualError.value = "";
+  }
+  manualOpen.value = !manualOpen.value;
+};
+const refreshAttendance = async () => {
+  const id = match.value.id;
+  const [d, a] = await Promise.all([
+    api.get(`/matches/${id}/details`),
+    api.get(`/matches/${id}/audit`),
+  ]);
+  if (Number(route.params.id) !== id) return;
+  details.value = d.data;
+  audit.value = a.data;
+};
+const saveManualAttendance = async () => {
+  savingAttendance.value = true;
+  manualError.value = "";
+  try {
+    await api.post(`/matches/${match.value.id}/attendance`, {
+      userId: manualUserId.value,
+      checkedAt: manualTime.value,
+    });
+    manualOpen.value = false;
+    addToast("Đã bổ sung điểm danh.", "success");
+    await refreshAttendance();
+  } catch (e) {
+    const message =
+      e.response?.data?.message || "Không cập nhật được điểm danh.";
+    if (manualOpen.value) manualError.value = message;
+    else addToast(message, "error");
+  } finally {
+    savingAttendance.value = false;
+  }
+};
+
 const availablePlayers = computed(() => {
   const byId = new Map(users.value.map((p) => [p.id, p]));
   for (const a of details.value.attendances || []) {
@@ -813,6 +1011,9 @@ const beginEdit = () => {
   extraPlayerSearch.value = "";
   showPlayerPicker.value = false;
   saveError.value = "";
+  statusChosen.value = false;
+  activeGoalIndex.value = null;
+  goalError.value = "";
   editing.value = true;
   if (!draft.value.roster.length) importAttendance();
 };
@@ -842,12 +1043,12 @@ const setTeam = (p, team) => {
       team,
       homeTeam: old?.homeTeam ?? p.home_team ?? null,
     });
-  draft.value.goals = draft.value.goals
-    .filter((g) => team || g.userId !== p.id)
-    .map((g) => ({
-      ...g,
-      assistUserId: g.assistUserId === p.id ? null : g.assistUserId,
-    }));
+  const currentGoal = activeGoal.value;
+  if (!team) {
+    draft.value.goals = draft.value.goals.filter((g) => g.userId !== p.id);
+    const index = draft.value.goals.indexOf(currentGoal);
+    activeGoalIndex.value = index < 0 ? null : index;
+  }
   if (!team && draft.value.mvp_user_id === p.id) draft.value.mvp_user_id = null;
   draft.value.goals.forEach((g) => {
     if (!assistsFor(g).some((p) => p.userId === g.assistUserId))
@@ -867,16 +1068,80 @@ const importAttendance = () => {
       "warning",
     );
 };
+const validScore = (value) =>
+  Number.isInteger(value) && value >= 0 && value <= 200;
+const hasScore = (entry) =>
+  validScore(entry.score_a) && validScore(entry.score_b);
+const displayedScore = computed(() =>
+  editing.value && hasScore(draft.value) && draft.value.status !== "cancelled"
+    ? draft.value
+    : report.value.status === "completed"
+      ? report.value
+      : null,
+);
+watch(
+  [() => draft.value.score_a, () => draft.value.score_b],
+  () => {
+    if (!editing.value || statusChosen.value || report.value.status !== "draft")
+      return;
+    if (Date.now() >= new Date(match.value.start_time).getTime())
+      draft.value.status = hasScore(draft.value) ? "completed" : "draft";
+  },
+  { flush: "sync" },
+);
+const activeGoal = computed(() => draft.value.goals[activeGoalIndex.value]);
+const goalPlayers = computed(() => {
+  const numbers = new Map(users.value.map((p) => [p.id, p.jersey_number]));
+  return draft.value.roster.map((p) => ({
+    ...p,
+    jersey_number: numbers.get(p.userId) ?? null,
+  }));
+});
+const goalPlayerName = (id) =>
+  goalPlayers.value.find((p) => p.userId === id)?.name || "Chưa chọn cầu thủ";
+const setGoalScorer = (id) => {
+  if (activeGoal.value.userId !== id) activeGoal.value.assistUserId = null;
+  activeGoal.value.userId = id;
+  goalError.value = "";
+};
+const openGoal = async (index) => {
+  activeGoalIndex.value = index;
+  goalError.value = "";
+  await nextTick();
+  goalEditor.value?.scrollIntoView({ block: "nearest" });
+  goalScorerField.value?.focus();
+};
+const completeActiveGoal = () => {
+  if (activeGoal.value && !activeGoal.value.userId) {
+    goalError.value = "Chọn người ghi bàn trước khi tiếp tục.";
+    goalScorerField.value?.focus();
+    return false;
+  }
+  return true;
+};
+const finishGoal = async () => {
+  if (!completeActiveGoal()) return;
+  activeGoalIndex.value = null;
+  await nextTick();
+  addGoalButton.value?.focus();
+};
 const addGoal = () => {
+  if (!completeActiveGoal()) return;
   draft.value.goals.push({
-    userId: draft.value.roster[0]?.userId ?? null,
+    userId: null,
     assistUserId: null,
     minute: null,
     ownGoal: false,
   });
+  openGoal(draft.value.goals.length - 1);
+};
+const removeGoal = (index) => {
+  activeGoalIndex.value = null;
+  draft.value.goals.splice(index, 1);
+  finishGoal();
 };
 const assistsFor = (g) =>
-  draft.value.roster.filter(
+  goalPlayers.value.filter(
     (p) =>
       p.userId !== g.userId &&
       p.team === draft.value.roster.find((s) => s.userId === g.userId)?.team,
@@ -890,6 +1155,12 @@ const goalCounts = computed(() => {
   return counts;
 });
 const save = async () => {
+  const incomplete = draft.value.goals.findIndex((g) => !g.userId);
+  if (incomplete >= 0) {
+    await openGoal(incomplete);
+    completeActiveGoal();
+    return;
+  }
   saving.value = true;
   saveError.value = "";
   try {
@@ -923,6 +1194,7 @@ const sortedGoals = computed(() =>
 const actionLabel = (a) =>
   ({
     "report.saved": "Lưu biên bản",
+    "attendance.added": "Bổ sung điểm danh",
     "match.created": "Tạo lịch trận",
     "match.updated": "Sửa lịch trận",
     "match.deleted": "Xóa lịch trận",
@@ -958,13 +1230,21 @@ const exportReport = () =>
       g.ownGoal ? "Có" : "",
     ]),
     [],
-    ["Điểm danh", "Thời gian", "Trạng thái", "Muộn (giây)", "Khoảng cách (m)"],
+    [
+      "Điểm danh",
+      "Thời gian",
+      "Trạng thái",
+      "Muộn (giây)",
+      "Khoảng cách (m)",
+      "Hình thức",
+    ],
     ...(details.value.attendances || []).map((a) => [
       a.user.name,
       formatVietnamDateTime(a.created_at),
       a.status,
       a.delay_seconds,
       a.distance,
+      a.source === "manual" ? "Admin bổ sung" : "GPS",
     ]),
     [],
     ["Ghi chú", report.value.notes],

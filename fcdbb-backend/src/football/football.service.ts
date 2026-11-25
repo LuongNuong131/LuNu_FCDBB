@@ -260,14 +260,9 @@ export class FootballService {
       if (Number.isNaN(score_a) || Number.isNaN(score_b))
         throw new BadRequestException('Tỉ số phải là số nguyên từ 0 đến 200.');
       if (data.status === 'completed') {
-        if (
-          score_a === null ||
-          score_b === null ||
-          !roster.some((p) => p.team === 'A') ||
-          !roster.some((p) => p.team === 'B')
-        )
+        if (score_a === null || score_b === null)
           throw new BadRequestException(
-            'Cần tỉ số và ít nhất một cầu thủ mỗi đội để chốt kết quả.',
+            'Nhập tỉ số của cả hai đội để chốt kết quả.',
           );
         if (new Date(match.start_time).getTime() > Date.now())
           throw new BadRequestException(
@@ -278,9 +273,9 @@ export class FootballService {
           const team = roster.find((p) => p.userId === g.userId)!.team;
           counts[g.ownGoal ? (team === 'A' ? 'B' : 'A') : team]++;
         });
-        if (counts.A !== score_a || counts.B !== score_b)
+        if (counts.A > score_a || counts.B > score_b)
           throw new BadRequestException(
-            'Số bàn thắng đã ghi phải khớp tỉ số A và B. Thêm đủ người ghi bàn trước khi chốt.',
+            'Số bàn thắng đã ghi của mỗi đội không được vượt tỉ số.',
           );
       }
       let season_id: number | null = null;
@@ -370,6 +365,7 @@ export class FootballService {
               created_at: a.created_at,
               delay_seconds: a.delay_seconds,
               distance: a.distance,
+              source: a.source,
             })),
           },
         }),

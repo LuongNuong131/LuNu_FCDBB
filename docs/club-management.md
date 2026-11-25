@@ -5,14 +5,15 @@
 1. **Quản trị → Lịch trận:** chọn giờ bắt đầu theo giờ Việt Nam. Hệ thống tự tính mốc đi muộn sau 15 phút và giờ kết thúc sau 2 tiếng. Có thể nhập trận đã qua để bổ sung lịch sử.
 2. **Trận đấu & mùa giải → Quản lý mùa giải:** tạo khoảng ngày cho mùa giải. Có thể sửa tên/ngày hoặc lưu trữ; không xóa lịch sử mùa giải.
 3. Mở **Chi tiết & biên bản** của một trận. Bấm **Lập biên bản**, gắn mùa giải và chia cầu thủ thực tế vào đội A/B. Mỗi trận có đội hình riêng, không thay đổi đội hình các trận trước.
-4. Thêm bàn thắng, kiến tạo, phút ghi bàn, phản lưới (nếu có), MVP và ghi chú. Điền tỉ số theo các bàn đã ghi hoặc nhập tỉ số trực tiếp.
-5. Chọn **Chốt kết quả** rồi lưu. Tỉ số phải khớp số bàn, mỗi đội có ít nhất một cầu thủ và trận đã bắt đầu. Bản nháp và trận hủy không tính bảng xếp hạng.
+4. Sau khi trận bắt đầu, nhập tỉ số hai đội (kể cả 0–0) và chọn **Lưu và chốt kết quả**. Có thể bổ sung đội hình và người ghi bàn sau. Số bàn đã ghi chi tiết của mỗi đội tối đa bằng tỉ số đã nhập.
+5. Khi thêm bàn, tìm người ghi bàn hoặc kiến tạo theo tên hoặc số áo. **Thêm bàn tiếp** thu gọn bàn vừa nhập. Phút ghi bàn và phản lưới nằm trong phần tùy chọn.
 6. Khi sửa kết quả đã chốt, nhập lý do. Có thể đưa về bản nháp để đối chiếu hoặc chỉnh lịch. Mỗi lần lưu tạo một phiên bản trong nhật ký.
 
 ## Tra cứu và thống kê
 
 - Trang chủ mặc định có **12 trận đã qua/trang**; chọn 6/12/24/48 trận. Tìm theo tên trận/sân, lọc mùa giải hoặc trạng thái, chuyển trang để xem toàn bộ lịch sử.
-- Chi tiết trận hiển thị đội hình A/B, tỉ số, bên thắng/hòa, diễn biến bàn thắng, MVP, ghi chú và điểm danh GPS: tên, thời điểm, khoảng cách, trạng thái, số giây đi muộn.
+- Trong **Chi tiết & biên bản → Điểm danh**, admin có thể tự điểm danh GPS ngoài bán kính 50 m và ngoài khung giờ mở. Khoảng cách đến sân vẫn hiển thị. **Bổ sung điểm danh** cho phép chọn cầu thủ và nhập giờ đến thực tế, kể cả sau khi trận đã chốt.
+- Trang **Cầu thủ** hiển thị số áo trong thẻ và hồ sơ thành viên. Số áo được cấp tự động trong khoảng 1–99. Admin có thể sửa tại **Quản trị → Thành viên → Số áo**.
 - Phần **Đội hình thực tế** mặc định chỉ liệt kê cầu thủ đã điểm danh ở trận đang xem, cùng các cầu thủ đã có trong biên bản. Người chưa có điểm danh chỉ được chọn qua nút **Thêm cầu thủ**; chọn đội A/B sẽ bổ sung riêng cho trận, không tạo điểm danh và không đổi đội cố định. Cầu thủ điểm danh nhưng chưa phân đội vẫn hiện để admin chọn đội thủ công. Tìm kiếm trong danh sách chính chỉ lọc cầu thủ của trận; danh sách bổ sung có ô tìm kiếm riêng.
 - **Đội hình thi đấu** và **điểm danh** là hai dữ liệu riêng: đến sân không đồng nghĩa chắc chắn được xếp vào đội hình. “Nạp người đã điểm danh” dùng đội cố định do admin cấu hình. Khi lập biên bản trống, những người đã điểm danh và đã phân đội được nạp sẵn; admin có thể điều chỉnh riêng cho trận.
 - Bảng xếp hạng: thắng 3 điểm, hòa 1, thua 0. Đồng điểm xét hiệu số rồi số bàn thắng. Phong độ hiển thị 5 trận mới nhất, từ trái sang phải.
@@ -41,7 +42,7 @@
 - Tên cầu thủ được chụp lại khi lần đầu đưa vào biên bản của trận. Đổi tên hồ sơ không viết lại tên trong biên bản cũ. Xóa tài khoản chưa có điểm danh vẫn giữ bản chụp trong biên bản.
 - Nhật ký lưu người sửa (ID và tên tại thời điểm sửa), giờ, lý do, bản trước/sau và bản chụp điểm danh tại thời điểm lưu biên bản. Lịch trận tạo/sửa/xóa cũng được ghi lại. Nhật ký chỉ dành cho admin, không có API sửa/xóa.
 - Nhật ký mới không thể tái dựng những chỉnh sửa đã xảy ra trước bản nâng cấp này. Danh sách “chưa có điểm danh” đối chiếu với **thành viên hiện tại**, không khẳng định ai vắng trong đội hình lịch sử.
-- Mọi API dữ liệu nội bộ yêu cầu JWT; chỉ `/api/ping` và `/api/auth/login` công khai. Backend kiểm tra tài khoản và quyền hiện tại từ database, không tin vai trò frontend. Thành viên chỉ cập nhật hồ sơ/mật khẩu/avatar của mình; điểm danh luôn dùng ID từ token.
+- Mọi API dữ liệu nội bộ yêu cầu JWT; chỉ `/api/ping` và `/api/auth/login` công khai. Backend kiểm tra tài khoản và quyền hiện tại từ database, không tin vai trò frontend. Thành viên chỉ cập nhật hồ sơ/mật khẩu/avatar của mình. Điểm danh GPS dùng ID từ token. Chỉ admin được bổ sung điểm danh cho cầu thủ.
 - Trận đã có điểm danh hoặc biên bản không được xóa. Hủy trận qua biên bản để giữ hồ sơ. Thành viên có dữ liệu điểm danh cũng không được xóa.
 - Biên bản dùng số `revision` để phát hiện hai phiên sửa đồng thời. Nếu gặp HTTP 409, giữ ghi chú cần thiết rồi tải lại để đối chiếu trước khi lưu tiếp.
 
@@ -52,6 +53,7 @@ Giữ nguyên các bảng hiện có. Thêm `seasons`, `match_reports`, `match_a
 - **SQLite local:** TypeORM tạo bảng mới bằng cơ chế synchronize sẵn có.
 - **PostgreSQL production:** migration `ClubManagement1794900000000` tự chạy khi backend khởi động. Migration chỉ tạo ba bảng mới nếu chưa có, không drop/rebuild bảng cũ. Tài khoản database cần quyền CREATE TABLE/INDEX và REFERENCES. Giữ `TYPEORM_SYNCHRONIZE=false` trên database production.
 - Migration `TeamAndGallery1794901000000` bổ sung `users.home_team` (nullable), `blog_posts.images` (JSON dạng text) và `blog_posts.revision` (mặc định 1). Cần quyền ALTER TABLE trên hai bảng; không ghi đè đội hình cũ hoặc ảnh bìa cũ.
+- Migration `AttendanceAndJerseyNumbers1794902000000` cấp số áo cho thành viên hiện có theo thứ tự ID, đồng thời thêm trường hình thức điểm danh và hỗ trợ khoảng cách để trống cho lượt bổ sung thủ công. Migration chạy trên SQLite và PostgreSQL.
 - Migration không tự tạo mùa giải hay bịa kết quả cho dữ liệu cũ. Admin có thể lập biên bản cho các trận cũ sau khi đối chiếu.
 - Trước khi đưa phiên bản lên production, sao lưu database theo quy trình vận hành. Deploy backend trước frontend do frontend mới cần API mới; tải lại/đăng nhập lại nếu token cũ đã hết hạn. Rollback ứng dụng giữ nguyên bảng mới; lệnh down cố ý không xóa dữ liệu audit.
 - Push nhánh chức năng tạo bản preview theo cấu hình hiện có. Merge vào `master` kích hoạt auto deploy frontend Vercel và backend Render; backend tự áp dụng các migration còn thiếu trên database đang cấu hình.
@@ -63,6 +65,8 @@ Tất cả đường dẫn có prefix `/api` và header `Authorization: Bearer <
 | Method     | Endpoint                          | Chức năng                                                                             | Quyền      |
 | ---------- | --------------------------------- | ------------------------------------------------------------------------------------- | ---------- |
 | PUT        | `/users/:id/team`                 | Gán đội cố định bằng `home_team: A/B/null`                                            | Admin      |
+| PUT        | `/users/:id/jersey-number`         | Cập nhật `jersey_number` từ 1 đến 99 hoặc để trống bằng `null`                         | Admin      |
+| POST       | `/matches/:id/attendance`          | Bổ sung điểm danh bằng `userId` và `checkedAt`                                        | Admin      |
 | POST / PUT | `/blog`, `/blog/:id`              | Multipart `images` (nhiều file), `retained_images`, `image_order`, `revision` khi sửa | Admin      |
 | GET        | `/seasons`                        | Danh sách mùa giải                                                                    | Thành viên |
 | POST / PUT | `/seasons`, `/seasons/:id`        | Tạo/sửa/lưu trữ                                                                       | Admin      |

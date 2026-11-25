@@ -19,7 +19,7 @@
           v-model="search"
           class="field"
           type="search"
-          placeholder="Tên, biệt danh hoặc vị trí…" /></label
+          placeholder="Tên, biệt danh, vị trí hoặc số áo…" /></label
       ><label
         ><span class="field-label">Vai trò</span
         ><select v-model="role" class="field">
@@ -71,7 +71,10 @@
             >{{ p.home_team ? `Đội ${p.home_team}` : "Chưa phân đội" }}</span
           >
         </div>
-        <div class="player-identity">
+        <div
+          class="player-identity"
+          :class="{ 'has-jersey': p.jersey_number != null }"
+        >
           <ClubAvatar
             :src="p.avatar"
             :name="p.name"
@@ -84,6 +87,10 @@
           <p class="text-xs muted mb-0">
             {{ p.nickname || p.position || "Chưa cập nhật vị trí" }}
           </p>
+          <span v-if="p.jersey_number != null" class="jersey-number">
+            <span class="jersey-label">Số áo</span>
+            <strong>{{ p.jersey_number }}</strong>
+          </span>
         </div>
         <div class="grid grid-cols-3 border-t border-slate-200 pt-4">
           <div>
@@ -143,7 +150,7 @@ const filtered = computed(() =>
         (team.value === "unassigned"
           ? !p.home_team
           : p.home_team === team.value)) &&
-      `${p.name} ${p.nickname || ""} ${p.position}`
+      `${p.name} ${p.nickname || ""} ${p.position} ${p.jersey_number ?? ""}`
         .toLocaleLowerCase("vi")
         .includes(search.value.toLocaleLowerCase("vi")),
   ),

@@ -12,6 +12,7 @@ import {
   User,
 } from '../src/fcdbb/entities/fcdbb.entity';
 import { ClubManagement1794900000000 } from '../src/migrations/1794900000000-ClubManagement';
+import { AttendanceAndJerseyNumbers1794902000000 } from '../src/migrations/1794902000000-AttendanceAndJerseyNumbers';
 
 describe('Club management: real SQLite database and authenticated HTTP API', () => {
   let app: INestApplication;
@@ -189,11 +190,11 @@ describe('Club management: real SQLite database and authenticated HTTP API', () 
       .set(auth())
       .expect(400);
   });
-  it('rejects duplicate rosters, mismatched scores, missing players and foreign-team assists', async () => {
+  it('rejects duplicate rosters, goals above the score, missing players and foreign-team assists', async () => {
     await request(app.getHttpServer())
       .put(`/api/matches/${match}/report`)
       .set(auth())
-      .send(report({ score_a: 2 }))
+      .send(report({ score_a: 0 }))
       .expect(400);
     await request(app.getHttpServer())
       .put(`/api/matches/${match}/report`)
@@ -474,6 +475,232 @@ describe('Club management: real SQLite database and authenticated HTTP API', () 
       .set(auth())
       .expect(400);
   });
+  it('assigns unique jersey numbers and only lets admins change them', async () => {
+    const server = request(app.getHttpServer());
+    const aProfile = await server
+      .get(`/api/users/${a}`)
+      .set(auth())
+      .expect(200);
+    const bProfile = await server
+      .get(`/api/users/${b}`)
+      .set(auth())
+      .expect(200);
+    expect(aProfile.body.jersey_number).toBeGreaterThan(0);
+    expect(bProfile.body.jersey_number).not.toBe(aProfile.body.jersey_number);
+    await server
+      .put(`/api/users/${a}/jersey-number`)
+      .set(memberAuth())
+      .send({ jersey_number: 40 })
+      .expect(403);
+    await server
+      .put(`/api/users/${a}/jersey-number`)
+      .set(auth())
+      .send({ jersey_number: 100 })
+      .expect(400);
+    await server
+      .put(`/api/users/${a}/jersey-number`)
+      .set(auth())
+      .send({ jersey_number: bProfile.body.jersey_number })
+      .expect(409);
+    const updated = await server
+      .put(`/api/users/${a}/jersey-number`)
+      .set(auth())
+      .send({ jersey_number: 40 })
+      .expect(200);
+    expect(updated.body.jersey_number).toBe(40);
+  });
+
+  it('closes score-only reports, including 0–0, and accepts scorers later', async () => {
+    const server = request(app.getHttpServer());
+    const id = (
+      await server.post('/api/matches').set(auth()).send(past).expect(201)
+    ).body.id;
+    const save = (data: object) =>
+      server
+        .put(`/api/matches/${id}/report`)
+        .set(auth())
+        .send(data)
+        .expect(200);
+    const scoreOnly = {
+      season_id: null,
+      roster: [],
+      goals: [],
+      mvp_user_id: null,
+    };
+    await save(report({ ...scoreOnly, score_a: 0, score_b: 0 }));
+    const result = await server
+      .get(`/api/matches/${id}/report`)
+      .set(memberAuth())
+      .expect(200);
+    expect(result.body.report).toMatchObject({
+      status: 'completed',
+      score_a: 0,
+      score_b: 0,
+      roster: [],
+      goals: [],
+    });
+    await save(
+      report({
+        ...scoreOnly,
+        score_a: 14,
+        score_b: 22,
+        revision: 1,
+        reason: 'Bổ sung tỉ số',
+      }),
+    );
+    const final = await save(
+      report({
+        season_id: null,
+        score_a: 14,
+        score_b: 22,
+        revision: 2,
+        reason: 'Bổ sung người ghi bàn',
+      }),
+    );
+    expect(final.body).toMatchObject({
+      score_a: 14,
+      score_b: 22,
+      goals: [{ userId: a }],
+    });
+  });
+
+  it('allows admin GPS check-in outside the window and manual attendance on completed matches', async () => {
+    const server = request(app.getHttpServer());
+    const id = (
+      await server.post('/api/matches').set(auth()).send(past).expect(201)
+    ).body.id;
+    await server
+      .put(`/api/matches/${id}/report`)
+      .set(auth())
+      .send(report({ season_id: null }))
+      .expect(200);
+    const gps = () =>
+      server
+        .post('/api/attendance/checkin')
+        .set(auth())
+        .send({ matchId: id, userId: a, lat: 11, lng: 107 });
+    const results = await Promise.all([gps(), gps()]);
+    expect(results.map((response) => response.status).sort()).toEqual([
+      201, 400,
+    ]);
+    const attendance = results.find(
+      (response) => response.status === 201,
+    )!.body;
+    expect(attendance.distance).toBeGreaterThan(50);
+    expect(attendance.user.id).not.toBe(a);
+
+    const manualPath = `/api/matches/${id}/attendance`;
+    const entry = { userId: a, checkedAt: '2026-01-10T18:00:00+07:00' };
+    await server.post(manualPath).set(memberAuth()).send(entry).expect(403);
+    await server
+      .post(manualPath)
+      .set(auth())
+      .send({ ...entry, checkedAt: '18:00' })
+      .expect(400);
+    const onTime = await server
+      .post(manualPath)
+      .set(auth())
+      .send(entry)
+      .expect(201);
+    expect(onTime.body).toMatchObject({
+      created_at: '2026-01-10T11:00:00.000Z',
+      source: 'manual',
+      status: 'Đúng giờ',
+      distance: null,
+      delay_seconds: 0,
+    });
+    await server.post(manualPath).set(auth()).send(entry).expect(400);
+    const late = await server
+      .post(manualPath)
+      .set(auth())
+      .send({ userId: b, checkedAt: '2026-01-10T18:17:00+07:00' })
+      .expect(201);
+    expect(late.body).toMatchObject({ status: 'Đi muộn', delay_seconds: 120 });
+    const detail = await server
+      .get(`/api/matches/${id}/details`)
+      .set(auth())
+      .expect(200);
+    expect(detail.body.attendances).toHaveLength(3);
+    expect(detail.body.absentUsers).toEqual([]);
+    const audit = await server
+      .get(`/api/matches/${id}/audit`)
+      .set(auth())
+      .expect(200);
+    expect(audit.body[0]).toMatchObject({
+      action: 'attendance.added',
+      after: { userId: b },
+    });
+
+    const scheduled = await server
+      .post('/api/matches')
+      .set(auth())
+      .send({
+        ...past,
+        start_time: new Date(Date.now() + 60 * 60_000),
+        lock_time: undefined,
+        end_time: undefined,
+      })
+      .expect(201);
+    const early = { matchId: scheduled.body.id, lat: 11, lng: 107 };
+    await server
+      .post('/api/attendance/checkin')
+      .set(memberAuth())
+      .send(early)
+      .expect(400);
+    await server
+      .post('/api/attendance/checkin')
+      .set(auth())
+      .send(early)
+      .expect(201);
+  });
+
+  it('backfills legacy jersey numbers and preserves historical attendance rows', async () => {
+    const legacy = await new DataSource({
+      type: 'better-sqlite3',
+      database: ':memory:',
+    }).initialize();
+    const runner = legacy.createQueryRunner();
+    try {
+      await runner.query('CREATE TABLE users (id integer PRIMARY KEY)');
+      await runner.query(`
+        CREATE TABLE attendance (
+          id integer PRIMARY KEY, match_id integer, user_id integer, distance integer NOT NULL
+        )
+      `);
+      await runner.query('INSERT INTO users (id) VALUES (5), (2), (9)');
+      await runner.query(
+        'INSERT INTO attendance (id, match_id, user_id, distance) VALUES (1, 4, 2, 9), (2, 4, 2, 12)',
+      );
+      const migration = new AttendanceAndJerseyNumbers1794902000000();
+      await migration.up(runner);
+      await migration.up(runner);
+      expect(await runner.query('SELECT * FROM users ORDER BY id')).toEqual([
+        { id: 2, jersey_number: 1 },
+        { id: 5, jersey_number: 2 },
+        { id: 9, jersey_number: 3 },
+      ]);
+      expect(
+        await runner.query(
+          'SELECT distance, source FROM attendance ORDER BY id',
+        ),
+      ).toEqual([
+        { distance: 9, source: null },
+        { distance: 12, source: null },
+      ]);
+      await runner.query(
+        "INSERT INTO attendance (match_id, user_id, source) VALUES (4, 5, 'manual')",
+      );
+      await expect(
+        runner.query(
+          "INSERT INTO attendance (match_id, user_id, source) VALUES (4, 5, 'gps')",
+        ),
+      ).rejects.toThrow();
+    } finally {
+      await runner.release();
+      await legacy.destroy();
+    }
+  });
+
   it('runs the additive migration over an existing schema without losing records', async () => {
     const legacy = await new DataSource({
       type: 'better-sqlite3',

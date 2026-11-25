@@ -7,7 +7,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual } from 'typeorm';
+import { Repository, LessThanOrEqual, QueryFailedError } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { MatchAudit, MatchReport, Season } from '../football/football.entity';
@@ -49,14 +49,12 @@ export class FcdbbService implements OnModuleInit {
     const admin = await this.userRepo.findOne({ where: { username: 'admin' } });
     if (!admin) {
       const hashed = await bcrypt.hash('admin123', 10);
-      await this.userRepo.save(
-        this.userRepo.create({
-          username: 'admin',
-          password: hashed,
-          name: 'Admin FCDBB',
-          role: 'admin',
-        }),
-      );
+      await this.createNumberedUser({
+        username: 'admin',
+        password: hashed,
+        name: 'Admin FCDBB',
+        role: 'admin',
+      });
     }
   }
 
@@ -106,16 +104,83 @@ export class FcdbbService implements OnModuleInit {
     const homeTeam = this.validateHomeTeam(data.home_team);
     const hashed = await bcrypt.hash(data.password, 10);
     return this.sanitizeUser(
-      await this.userRepo.save(
-        this.userRepo.create({
-          username: data.username.trim(),
-          name: data.name.trim(),
-          password: hashed,
-          role: 'user',
-          home_team: homeTeam,
-        }),
-      ),
+      await this.createNumberedUser({
+        username: data.username.trim(),
+        name: data.name.trim(),
+        password: hashed,
+        role: 'user',
+        home_team: homeTeam,
+      }),
     );
+  }
+
+  private isUniqueViolation(
+    error: unknown,
+    index: string,
+    sqliteColumns: string,
+  ) {
+    if (!(error instanceof QueryFailedError)) return false;
+    const driver = error.driverError as {
+      code?: string;
+      constraint?: string;
+      message?: string;
+    };
+    return (
+      (driver.code === '23505' && driver.constraint === index) ||
+      (driver.code === 'SQLITE_CONSTRAINT_UNIQUE' &&
+        driver.message?.endsWith(sqliteColumns))
+    );
+  }
+
+  private isJerseyNumberTaken(error: unknown) {
+    return this.isUniqueViolation(
+      error,
+      'IDX_users_jersey_number',
+      'users.jersey_number',
+    );
+  }
+
+  private async createNumberedUser(data: Partial<User>) {
+    // Retry if another request claims the same available number before our insert.
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const users = await this.userRepo.find({
+        select: { jersey_number: true },
+      });
+      const used = new Set(users.map((user) => user.jersey_number));
+      const jersey_number =
+        Array.from({ length: 99 }, (_, i) => i + 1).find((n) => !used.has(n)) ??
+        null;
+      try {
+        return await this.userRepo.save(
+          this.userRepo.create({ ...data, jersey_number }),
+          { transaction: false },
+        );
+      } catch (error) {
+        if (!this.isJerseyNumberTaken(error)) throw error;
+      }
+    }
+    throw new ConflictException('Số áo vừa thay đổi. Vui lòng thử lại.');
+  }
+
+  async setJerseyNumber(id: number, number: unknown) {
+    if (
+      number !== null &&
+      (typeof number !== 'number' ||
+        !Number.isInteger(number) ||
+        number < 1 ||
+        number > 99)
+    )
+      throw new BadRequestException('Số áo phải là số nguyên từ 1 đến 99.');
+    const user = await this.userRepo.findOneBy({ id });
+    if (!user) throw new BadRequestException('Cầu thủ không tồn tại.');
+    try {
+      await this.userRepo.update(id, { jersey_number: number });
+    } catch (error) {
+      if (this.isJerseyNumberTaken(error))
+        throw new ConflictException('Số áo này đã được sử dụng.');
+      throw error;
+    }
+    return this.getProfileById(id);
   }
 
   private validateHomeTeam(team: unknown): 'A' | 'B' | null {
@@ -232,8 +297,8 @@ export class FcdbbService implements OnModuleInit {
     const filename = `${user.username}_${dobStr}${ext}`;
     const publicUrl = await this.saveImage(file, filename, true);
 
-    user.avatar = `${publicUrl}?t=${Date.now()}`;
-    return this.sanitizeUser(await this.userRepo.save(user));
+    await this.userRepo.update(id, { avatar: `${publicUrl}?t=${Date.now()}` });
+    return this.getProfileById(id);
   }
 
   async getHomeData() {
@@ -454,9 +519,11 @@ export class FcdbbService implements OnModuleInit {
       p2 = (lat2 * Math.PI) / 180;
     const dp = ((lat2 - lat1) * Math.PI) / 180,
       dl = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dp / 2) * Math.sin(dp / 2) +
-      Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+    const a = Math.min(
+      1,
+      Math.sin(dp / 2) ** 2 +
+        Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2,
+    );
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
@@ -477,62 +544,151 @@ export class FcdbbService implements OnModuleInit {
     return new Date(match.start_time.getTime() - 30 * 60 * 1000);
   }
 
-  async checkin(userId: number, matchId: number, lat: number, lng: number) {
+  private async matchForAttendance(matchId: number, isAdmin: boolean) {
     if (!Number.isInteger(matchId) || matchId < 1)
       throw new BadRequestException('Trận đấu không hợp lệ.');
+    const match = await this.matchRepo.findOneBy({ id: matchId });
+    if (!match) throw new BadRequestException('Trận đấu không tồn tại!');
+    const report = await this.matchRepo.manager.findOneBy(MatchReport, {
+      match_id: matchId,
+    });
+    if (
+      report?.status === 'cancelled' ||
+      (!isAdmin && report?.status === 'completed')
+    )
+      throw new BadRequestException(
+        'Trận đã chốt hoặc hủy, không thể điểm danh.',
+      );
+    return match;
+  }
+
+  private async recordAttendance(
+    repo: Repository<Attendance>,
+    match: Match,
+    userId: number,
+    checkedAt: Date,
+    distance: number | null,
+    source: 'gps' | 'manual',
+  ) {
+    const duplicate = new BadRequestException(
+      source === 'manual'
+        ? 'Thành viên này đã điểm danh rồi!'
+        : 'Bạn đã điểm danh rồi!',
+    );
+    if (await repo.existsBy({ user: { id: userId }, match: { id: match.id } }))
+      throw duplicate;
+    const lateBy = checkedAt.getTime() - match.lock_time.getTime();
+    const record = repo.create({
+      user: { id: userId },
+      match: { id: match.id },
+      distance,
+      source,
+      status: lateBy > 0 ? 'Đi muộn' : 'Đúng giờ',
+      delay_seconds: Math.max(0, Math.floor(lateBy / 1000)),
+      created_at: checkedAt,
+    });
+    try {
+      await repo.insert(record);
+    } catch (error) {
+      if (
+        this.isUniqueViolation(
+          error,
+          'IDX_attendance_match_user_recorded',
+          'attendance.match_id, attendance.user_id',
+        )
+      )
+        throw duplicate;
+      throw error;
+    }
+    return record;
+  }
+
+  async checkin(matchId: number, lat: number, lng: number, actor: Actor) {
     if (
       ![lat, lng].every((v) => typeof v === 'number' && Number.isFinite(v)) ||
       Math.abs(lat) > 90 ||
       Math.abs(lng) > 180
     )
       throw new BadRequestException('Vị trí GPS không hợp lệ.');
-    const report = await this.matchRepo.manager.findOneBy(MatchReport, {
-      match_id: matchId,
-    });
-    if (report && report.status !== 'draft')
-      throw new BadRequestException(
-        'Trận đã chốt hoặc hủy, không thể điểm danh.',
-      );
-    const exist = await this.attendanceRepo.findOne({
-      where: { user: { id: userId }, match: { id: matchId } },
-    });
-    if (exist) throw new BadRequestException('Bạn đã điểm danh rồi!');
-    const match = await this.matchRepo.findOne({ where: { id: matchId } });
-    if (!match) throw new BadRequestException('Trận đấu không tồn tại!');
+    const isAdmin = actor.role === 'admin';
+    const match = await this.matchForAttendance(matchId, isAdmin);
     const now = new Date();
-    const lockTime = new Date(match.lock_time);
-    const endTime = new Date(match.end_time);
-    const earliestCheckin = this.checkinOpensAt(match);
-    if (now < earliestCheckin) {
-      throw new BadRequestException(
-        `Chưa đến giờ điểm danh. Bạn có thể điểm danh từ ${this.formatVietnamDateTime(earliestCheckin)}.`,
-      );
-    }
-    if (now > endTime)
-      throw new BadRequestException(
-        'Trận đấu đã kết thúc, không thể điểm danh.',
-      );
-
     const dist = this.calcDist(lat, lng, match.lat, match.lng);
-    if (dist > 50)
-      throw new BadRequestException(
-        `Bạn cách sân ${Math.round(dist)}m (Yêu cầu <= 50m)!`,
-      );
-
-    let status = 'Đúng giờ';
-    let delaySeconds = 0;
-    if (now > lockTime) {
-      status = 'Đi muộn';
-      delaySeconds = Math.floor((now.getTime() - lockTime.getTime()) / 1000);
+    if (!isAdmin) {
+      const earliestCheckin = this.checkinOpensAt(match);
+      if (now < earliestCheckin)
+        throw new BadRequestException(
+          `Chưa đến giờ điểm danh. Bạn có thể điểm danh từ ${this.formatVietnamDateTime(earliestCheckin)}.`,
+        );
+      if (now > match.end_time)
+        throw new BadRequestException(
+          'Trận đấu đã kết thúc, không thể điểm danh.',
+        );
+      if (dist > 50)
+        throw new BadRequestException(
+          `Bạn cách sân ${Math.round(dist)}m (Yêu cầu <= 50m)!`,
+        );
     }
-    const record = this.attendanceRepo.create({
-      user: { id: userId },
-      match: { id: matchId },
-      distance: Math.round(dist),
-      status,
-      delay_seconds: delaySeconds,
+    return this.recordAttendance(
+      this.attendanceRepo,
+      match,
+      actor.id,
+      now,
+      Math.round(dist),
+      'gps',
+    );
+  }
+
+  async addManualAttendance(
+    matchId: number,
+    userId: number,
+    checkedAt: unknown,
+    actor: Actor,
+  ) {
+    const match = await this.matchForAttendance(matchId, true);
+    if (!Number.isInteger(userId) || userId < 1)
+      throw new BadRequestException('Thành viên không hợp lệ.');
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new BadRequestException('Thành viên không tồn tại.');
+    const timestamp =
+      typeof checkedAt === 'string' &&
+      /^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?(?:(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2}))?$/.exec(
+        checkedAt,
+      );
+    if (
+      !timestamp ||
+      new Date(`${timestamp[1]}T00:00:00Z`).getUTCDate() !==
+        Number(timestamp[1].slice(-2))
+    )
+      throw new BadRequestException('Chọn ngày và giờ điểm danh hợp lệ.');
+    const time = this.parseVietnamDate(checkedAt);
+    if (!time)
+      throw new BadRequestException('Chọn ngày và giờ điểm danh hợp lệ.');
+
+    return this.attendanceRepo.manager.transaction(async (manager) => {
+      const record = await this.recordAttendance(
+        manager.getRepository(Attendance),
+        match,
+        user.id,
+        time,
+        null,
+        'manual',
+      );
+      await manager.insert(MatchAudit, {
+        match_id: matchId,
+        actor_id: actor.id,
+        actor_name: actor.name,
+        action: 'attendance.added',
+        after: {
+          userId: user.id,
+          name: user.name,
+          created_at: record.created_at,
+          status: record.status,
+          delay_seconds: record.delay_seconds,
+        },
+      });
+      return record;
     });
-    return this.attendanceRepo.save(record);
   }
 
   async getMatchDetails(matchId: number) {
